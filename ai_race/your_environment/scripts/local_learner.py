@@ -10,11 +10,14 @@ class LocalLearner(BaseLearner):
     #super().__init__()
     pass
 
-  def _get_action(self, img, stat):
+  def _get_action(self, img, stat = None):
     # Pass to environment
-    action = self.__env.spin_once(img, stat)
+    if stat == None:
+      action = self.__env.start_new_episode(img)
+    else:
+      action = self.__env.step_once(img, stat[0], stat[1])
     return action
-  
+
   def _get_episode_count(self):
     return self.__env.get_episode_count()
 

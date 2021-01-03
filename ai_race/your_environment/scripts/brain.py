@@ -31,7 +31,7 @@ class Brain:
         self.model = self.model.to(self.device)
 
         print('using device:', self.device)
-        print(self.model)  # ネットワークの形を出力
+        #print(self.model)  # ネットワークの形を出力
 
         # 最適化手法の設定
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.0001)

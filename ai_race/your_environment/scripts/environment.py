@@ -9,7 +9,7 @@ import torchvision.transforms as transforms
 import cv2
 
 class Environment:
- 
+
   def __init__(self, batch_size = 32, capacity = 10000, gamma = 0.99):
     # Generate agent
     self.agent = Agent(batch_size, capacity, gamma)
@@ -17,20 +17,11 @@ class Environment:
     self.step_count = 0
     self.prev_state = None
     self.prev_action = None
-  
+
   def get_episode_count(self):
     return self.episode_id
 
-  def spin_once(self, observation, stat):
-    (succeeded, failed, reset) = stat
-    if reset:
-      action = self._start_new_episode(observation)
-    else:
-      action = self._step_once(observation, succeeded, failed)
-    return action
-
- 
-  def _start_new_episode(self, observation):
+  def start_new_episode(self, observation):
     # Observation: Image BGR8
 
     # Prepare new episode
@@ -44,7 +35,7 @@ class Environment:
 
     '''
     # Get action
-    action = self.agent.get_action(state, self.step_count)
+    action = self.agent.get_action(state, self.get_episode_count())
 
     # Prepare for upcoming next step
     self.prev_state = state
@@ -53,12 +44,9 @@ class Environment:
 
     return self._cvt_action(action)
     '''
+    return 0.6
 
-    cv2.imshow("img", observation)
-    cv2.waitKey(10)
-    return 1.0
-
-  def _step_once(self, observation, succeeded, failed):
+  def step_once(self, observation, succeeded, failed):
     # Observation: Image BGR8
 
     # Prepare for upcoming next step
@@ -77,7 +65,7 @@ class Environment:
 
     '''
     # Get next action
-    action = self.agent.get_action(state, self.step_count)
+    action = self.agent.get_action(state, self.get_episode_count())
 
     # Prepare for upcoming next step
     self.prev_state = state
@@ -87,9 +75,7 @@ class Environment:
     return self._cvt_action(action)
     '''
 
-    cv2.imshow("img", observation)
-    cv2.waitKey(10)
-    return 1.0
+    return 0.6
 
   def _calc_reward(self, succeeded, failed):
     val = 0.0

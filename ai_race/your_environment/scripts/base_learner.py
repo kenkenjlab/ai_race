@@ -11,7 +11,16 @@ from cv_bridge import CvBridge
 import tf
 import numpy as np
 from game_state import GameState
+import requests
+import json
+from enum import Enum
 
+class LearnerState(Enum):
+  STARTUP = "STARTUP"
+  RUNNING = "RUNNING"
+  FINISHED = "FINISHED"
+  RESETTING = "RESETTING"
+  RESET_DONE = "RESET_DONE"
 class BaseLearner(object):
   __metaclass__ = ABCMeta
   __bridge = CvBridge()
@@ -31,13 +40,16 @@ class BaseLearner(object):
   __prev_game_stat = GameState()
   __curr_game_stat = GameState()
   __prev_pos = np.array([0.0, 0.0])
+  __state = LearnerState.STARTUP
 
   # Training state
   __episode_should_start = True
 
-  # Thresholds
+  # Constants
   THRESH_DIST_MOVING = 0.01  # [m]
   MAX_EPISODE = 100
+  JUDGESERVER_UPDATEDATA_URL = "http://127.0.0.1:5000/judgeserver/updateData"
+  JUDGESERVER_REQUEST_URL = "http://127.0.0.1:5000/judgeserver/request"
 
   def __init__(self):
     pass
@@ -46,35 +58,66 @@ class BaseLearner(object):
     # Register ros node
     rospy.init_node(self.__node_name, anonymous=True)
 
+    # Get initial value
+    self.__tf_lis = tf.TransformListener()
+    self.__prev_pos = self._get_current_position()
+
+    # Initialize
+    self._init_game()
+
     # Register publisher and subscriber
     self.__twist_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-    self.__tf_lis = tf.TransformListener()
     rospy.Subscriber('/gamestate', String, self._cb_state_acquired)
     rospy.Subscriber('/front_camera/image_raw', Image, self._cb_image_acquired)
 
-    # Get initial value
-    self.__prev_pos = self._get_current_position()
-
     # Spin
-    print "BaseLearner main iteration started."
+    print( "BaseLearner main iteration started.")
     rospy.spin()
 
   def _cb_state_acquired(self, state):
-    # Store previous one
-    self.__prev_game_stat = self.__curr_game_stat
+    game_stat = GameState()
+    game_stat.parse(state.data)
+    if game_stat.curr_time == self.__curr_game_stat.curr_time:
+      # Do nothing if same information is arrived
+      return
 
-    # Extract game status
-    self.__curr_game_stat.parse(state.data)
+    # Store
+    self.__prev_game_stat = self.__curr_game_stat
+    self.__curr_game_stat = game_stat
 
   def _cb_image_acquired(self, data):
+    # Judge current status; stat=(succeeded, failed, reset)
+    stat = self._judge_current_status()
+
+    if self.__state == LearnerState.STARTUP:
+      self._spin_once(data)
+      self.__state = LearnerState.RUNNING
+    elif self.__state == LearnerState.RUNNING:
+      ### Infer and publish
+      self._spin_once(data, stat)
+      if stat[0] or stat[1]:
+        self.__state = LearnerState.FINISHED
+    elif self.__state == LearnerState.FINISHED:
+      ### Reset game
+      print('[{}]'.format(self.__state))
+      self._init_game()
+      self.__state = LearnerState.RESETTING
+    elif self.__state == LearnerState.RESETTING:
+      ### Check if reset game state is arrived
+      print('[{}]'.format(self.__state))
+      if stat[2]:
+        self.__state = LearnerState.RESET_DONE
+    elif self.__state == LearnerState.RESET_DONE:
+      ### Restart if new two game states are arrived
+      if not stat[2]:
+        self.__state = LearnerState.STARTUP
+
+  def _spin_once(self, data, stat = None):
     # Record current time
     self.__timestamp_begin = time.time()
 
     # Extract image data in OpenCV format
     img = self.__bridge.imgmsg_to_cv2(data, 'bgr8')
-
-    # Judge current status; stat=(succeeded, failed, reset)
-    stat = self._judge_current_status()
 
     # Get action
     action = self._get_action(img, stat)
@@ -88,19 +131,18 @@ class BaseLearner(object):
     # Record current time
     self.__timestamp_end = time.time()
 
-    # Reset game if succeeded or failed
-    if stat[0] or stat[1]:
-      # TODO: Reset game by publishing some topic
-      pass
-
     # Print information
     episode = self._get_episode_count()
     time_diff = self.__timestamp_end - self.__timestamp_begin
-    print('ep={0}; proc={1:.3f}[s]; velo={2:.2f}, yawrate={3:.2f}'.format(episode, time_diff, twist.linear.x, twist.angular.z))
+    print('[{0}] ep={1}; proc={2:.3f}[s]; velo={3:.2f}, yawrate={4:.2f}'.format(self.__state, episode, time_diff, twist.linear.x, twist.angular.z))
 
   def _judge_current_status(self):
     # Compare with previous game state
-    stat = self.__curr_game_stat.compare(self.__prev_game_stat)
+    verbose = (self.__state == LearnerState.RUNNING)
+    try:
+      stat = self.__curr_game_stat.compare(self.__prev_game_stat, verbose)
+    except:
+      stat = (False, False, False)
 
     # Calculate translation vector
     curr_pos = self._get_current_position()
@@ -109,8 +151,8 @@ class BaseLearner(object):
     # Judge if ego-vehicle is moving or stopped
     if dist < self.THRESH_DIST_MOVING:
       # Regard as stopped
-      pass
-      #failed = True
+      stat[1] = True
+      print('Ego-vehicle stopped')
 
     return stat
 
@@ -137,6 +179,28 @@ class BaseLearner(object):
     twist.angular.y = 0.0
     twist.angular.z = action
     return twist
+
+  def _post(self, url, data):
+    res = requests.post(url, json.dumps(data), headers={'Content-Type': 'application/json'})
+    return res
+
+  def _init_game(self):
+    # Send "init"
+    req_data = {"change_state": "init"}
+    print("Sending 'init' to judge server...")
+    self._post(self.JUDGESERVER_REQUEST_URL, req_data)
+
+    # Send "manual recovery"
+    req_data = {"is_courseout": 1}
+    print("Sending 'manual recovery' to judge server...")
+    self._post(self.JUDGESERVER_UPDATEDATA_URL, req_data)
+
+    # Wait a second
+    rospy.sleep(1.)
+    # Send "start"
+    req_data = {"change_state": "start"}
+    print("Sending 'start' to judge server...")
+    self._post(self.JUDGESERVER_REQUEST_URL, req_data)
 
   @abstractmethod
   def _get_action(self, img, stat):
