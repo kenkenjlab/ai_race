@@ -15,15 +15,17 @@ import torchvision.models as models
 #------------------------------------------------
 
 class Brain:
-    def __init__(self, batch_size = 32, capacity = 10000, gamma = 0.99):
+    def __init__(self, num_actions, batch_size = 32, capacity = 1000, gamma = 0.99):
         self.batch_size = batch_size
         self.gamma = gamma
+        self.num_actions = num_actions
 
         # 経験を記憶するメモリオブジェクトを生成
         self.memory = ReplayMemory(capacity)
 
         # Build network
         self.model = models.resnet18()
+        self.model.fc = torch.nn.Linear(512, self.num_actions)
 
         # Set device type; GPU or CPU (Use GPU if available)
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -35,6 +37,9 @@ class Brain:
 
         # 最適化手法の設定
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.0001)
+
+    def _infer(self, data):
+        return self.model(data)
 
     def replay(self):
         """Experience Replayでネットワークの重みを学習 """
@@ -55,8 +60,7 @@ class Brain:
         batch = Transition(*zip(*transitions))
 
         # cartpoleがdoneになっておらず、next_stateがあるかをチェックするマスクを作成
-        non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None,
-                                                    batch.next_state)))
+        non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None, batch.next_state)))
 
         # バッチから状態、行動、報酬を格納（non_finalはdoneになっていないstate）
         # catはConcatenates（結合）のことです。
@@ -65,8 +69,7 @@ class Brain:
         state_batch = Variable(torch.cat(batch.state))
         action_batch = Variable(torch.cat(batch.action))
         reward_batch = Variable(torch.cat(batch.reward))
-        non_final_next_states = Variable(torch.cat([s for s in batch.next_state
-                                                    if s is not None]))
+        non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]))
 
         # Set device type; GPU or CPU
         state_batch = state_batch.to(self.device)
@@ -82,7 +85,7 @@ class Brain:
         # self.model(state_batch)は、[torch.FloatTensor of size self.batch_sizex2]になっており、
         # 実行したアクションに対応する[torch.FloatTensor of size self.batch_sizex1]にするために
         # gatherを使用します。
-        state_action_values = self.model(state_batch).gather(1, action_batch)
+        state_action_values = self._infer(state_batch).gather(1, action_batch)
 
         # max{Q(s_t+1, a)}値を求める。
         # 次の状態がない場合は0にしておく
@@ -93,7 +96,7 @@ class Brain:
         # 次の状態がある場合の値を求める
         # 出力であるdataにアクセスし、max(1)で列方向の最大値の[値、index]を求めます
         # そしてその値（index=0）を出力します
-        next_state_values[non_final_mask] = self.model(
+        next_state_values[non_final_mask] = self._infer(
             non_final_next_states).data.max(1)[0]
 
         # 教師となるQ(s_t, a_t)値を求める
@@ -123,12 +126,21 @@ class Brain:
             input = input.to(self.device)
 
             # Infer
-            output = self.model(input)
-            action = output.view(1, 1)
+            output = self._infer(input)
+            action = output.data.max(1)[1].view(1, 1)
 
         else:
             # Generate random value [0.0, 1.0)
-            action = torch.FloatTensor([[random.random()]])
+            action = torch.LongTensor([[random.randrange(self.num_actions)]])
             action = action.to(self.device)
 
         return action  # FloatTensor size 1x1
+
+    def save(self, path):
+        # Save a model checkpoint.
+        print('Saving model...: {}'.format(path))
+        torch.save(self.model.state_dict(), path)
+
+    def load(self, path):
+        model = torch.load(path)
+        self.model.load_state_dict(model)

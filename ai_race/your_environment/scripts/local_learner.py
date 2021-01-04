@@ -4,11 +4,10 @@ from base_learner import BaseLearner
 from environment import Environment
 
 class LocalLearner(BaseLearner):
-  __env = Environment()
+  __env = Environment(3)
 
   def __init__(self):
-    #super().__init__()
-    pass
+    BaseLearner.__init__(self)
 
   def _get_action(self, img, stat = None):
     # Pass to environment
@@ -20,6 +19,12 @@ class LocalLearner(BaseLearner):
 
   def _get_episode_count(self):
     return self.__env.get_episode_count()
+
+  def _save_model(self):
+    self.__env.save_model(self.model_output_dir, self.name)
+
+  def _load_model(self, path):
+    self.__env.save_model(path)
 
 if __name__ == '__main__':
   print "Starting LocalLearner..."

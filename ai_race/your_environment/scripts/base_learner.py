@@ -51,8 +51,9 @@ class BaseLearner(object):
   JUDGESERVER_UPDATEDATA_URL = "http://127.0.0.1:5000/judgeserver/updateData"
   JUDGESERVER_REQUEST_URL = "http://127.0.0.1:5000/judgeserver/request"
 
-  def __init__(self):
-    pass
+  def __init__(self, name = "untitled", model_output_dir = "./"):
+    self.name = name
+    self.model_output_dir = model_output_dir
 
   def run(self):
     # Register ros node
@@ -102,6 +103,10 @@ class BaseLearner(object):
       print('[{}]'.format(self.__state))
       self._init_game()
       self.__state = LearnerState.RESETTING
+
+      # Save model
+      self._save_model()
+
     elif self.__state == LearnerState.RESETTING:
       ### Check if reset game state is arrived
       print('[{}]'.format(self.__state))
@@ -212,4 +217,12 @@ class BaseLearner(object):
   @abstractmethod
   def _get_episode_count(self):
     # ret: int
+    raise NotImplementedError()
+
+  @abstractmethod
+  def _save_model(self):
+    raise NotImplementedError()
+
+  @abstractmethod
+  def _load_model(self, path):
     raise NotImplementedError()
