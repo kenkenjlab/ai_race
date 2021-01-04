@@ -24,9 +24,9 @@ class LocalLearner(BaseLearner):
     self.__env.save_model(self.model_output_dir, self.name)
 
   def _load_model(self, path):
-    self.__env.save_model(path)
+    self.__env.load_model(path)
 
 if __name__ == '__main__':
-  print "Starting LocalLearner..."
+  print("Starting LocalLearner...")
   learner = LocalLearner()
   learner.run()
