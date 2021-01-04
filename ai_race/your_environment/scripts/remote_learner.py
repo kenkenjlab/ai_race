@@ -36,7 +36,7 @@ class RemoteLearner(BaseLearner):
     # Check returned value
     if response.status_code != 200:
       print("ERROR: Server returned {}".format(response.status_code))
-Z
+
     # Decode JSON string
     #print(response.text)
     ret = json.loads(response.text)

@@ -20,7 +20,7 @@ class Environment:
     self.prev_action = None
 
   def save_model(self, dir, prefix, suffix = ''):
-    path = os.path.join(dir, "{}{:04}{}.pth".format(prefix, self.get_episode_count, suffix))
+    path = os.path.join(dir, "{}{:04}{}.pth".format(prefix, self.get_episode_count(), suffix))
     self.agent.save(path)
 
   def load_model(self, path):
