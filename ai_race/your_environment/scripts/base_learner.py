@@ -195,18 +195,22 @@ class BaseLearner(object):
     return res
 
   def _init_game(self):
-    # Send "init"
-    req_data = {"change_state": "init"}
-    print("Sending 'init' to judge server...")
-    self._post(self.JUDGESERVER_REQUEST_URL, req_data)
-
     # Send "manual recovery"
     req_data = {"is_courseout": 1}
     print("Sending 'manual recovery' to judge server...")
     self._post(self.JUDGESERVER_UPDATEDATA_URL, req_data)
 
     # Wait a second
+    rospy.sleep(0.01)
+
+    # Send "init"
+    req_data = {"change_state": "init"}
+    print("Sending 'init' to judge server...")
+    self._post(self.JUDGESERVER_REQUEST_URL, req_data)
+
+    # Wait a second
     rospy.sleep(1.)
+
     # Send "start"
     req_data = {"change_state": "start"}
     print("Sending 'start' to judge server...")

@@ -53,7 +53,10 @@ class Environment:
     # Observation: Image BGR8
 
     # Prepare for upcoming next step
-    state = self._cvt_to_tensor(observation)    # Regard observation as status 's' directly
+    if succeeded or failed:
+      state = None
+    else:
+      state = self._cvt_to_tensor(observation)    # Regard observation as status 's' directly
 
     # Calculate reward
     reward = self._calc_reward(succeeded, failed)
