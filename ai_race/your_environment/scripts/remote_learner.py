@@ -5,9 +5,12 @@ import cv2
 import json
 import argparse
 import requests
+import time
 
 class RemoteLearner(BaseLearner):
   __episode_count = 0
+  __timestamp_prev = time.time()
+  HTTP_REQUEST_DURATION = 2.0   # [s]
 
   def __init__(self, base_url):
     BaseLearner.__init__(self)
@@ -21,6 +24,12 @@ class RemoteLearner(BaseLearner):
       print('WARNING: {} returned from {}'.format(response.status_code, self.__base_url))
 
   def _get_action(self, img, stat = None):
+    # Return no action if too frequent
+    timestamp_curr = time.time()
+    if timestamp_curr - self.__timestamp_prev < self.HTTP_REQUEST_DURATION:
+      return False, 0.0, 0.0
+    self.__timestamp_prev = timestamp_curr
+
     # Encode and set image data
     _, buf = cv2.imencode(".png", img)
     files = { 'image': buf }
@@ -41,7 +50,7 @@ class RemoteLearner(BaseLearner):
     #print(response.text)
     ret = json.loads(response.text)
     self.__episode_count = ret['episode']
-    return ret['yaw_rate']
+    return True, 1.6, ret['yaw_rate']
 
   def _get_episode_count(self):
     return self.__episode_count

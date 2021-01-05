@@ -15,7 +15,7 @@ class LocalLearner(BaseLearner):
       action = self.__env.start_new_episode(img)
     else:
       action = self.__env.step_once(img, stat[0], stat[1])
-    return action
+    return True, 1.6, action
 
   def _get_episode_count(self):
     return self.__env.get_episode_count()

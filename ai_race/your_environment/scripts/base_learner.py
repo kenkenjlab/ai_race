@@ -101,6 +101,8 @@ class BaseLearner(object):
     elif self.__state == LearnerState.FINISHED:
       ### Reset game
       print('[{}]'.format(self.__state))
+      twist = self._gen_twist(0.0, 0.0)
+      self.__twist_pub.publish(twist)
       self._init_game()
       self.__state = LearnerState.RESETTING
 
@@ -125,10 +127,14 @@ class BaseLearner(object):
     img = self.__bridge.imgmsg_to_cv2(data, 'bgr8')
 
     # Get action
-    action = self._get_action(img, stat)
+    ret, velocity, yaw_rate = self._get_action(img, stat)
+    episode = self._get_episode_count()
+    if not ret:
+      print('[{0}] ep={1}; skipped'.format(self.__state, episode))
+      return
 
     # Generate Twist message
-    twist = self._gen_twist(action)
+    twist = self._gen_twist(velocity, yaw_rate)
 
     # Publish action
     self.__twist_pub.publish(twist)
@@ -137,7 +143,6 @@ class BaseLearner(object):
     self.__timestamp_end = time.time()
 
     # Print information
-    episode = self._get_episode_count()
     time_diff = self.__timestamp_end - self.__timestamp_begin
     print('[{0}] ep={1}; proc={2:.3f}[s]; velo={3:.2f}, yawrate={4:.2f}'.format(self.__state, episode, time_diff, twist.linear.x, twist.angular.z))
 
@@ -174,15 +179,15 @@ class BaseLearner(object):
       pos = np.array([0.0, 0.0])
     return pos
 
-  def _gen_twist(self, action):
+  def _gen_twist(self, velocity, yaw_rate):
     # Generate Twist message
     twist = Twist()
-    twist.linear.x = 1.6
+    twist.linear.x = velocity
     twist.linear.y = 0.0
     twist.linear.z = 0.0
     twist.angular.x = 0.0
     twist.angular.y = 0.0
-    twist.angular.z = action
+    twist.angular.z = yaw_rate
     return twist
 
   def _post(self, url, data):
