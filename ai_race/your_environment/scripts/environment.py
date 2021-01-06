@@ -68,6 +68,8 @@ class Environment:
     self.agent.update_q_function()
 
     # Get next action
+    if state != None:
+      return 0.0    # TODO: Return flag which expresses the final round
     action = self.agent.get_action(state, self.get_episode_count())
 
     # Prepare for upcoming next step
