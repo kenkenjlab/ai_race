@@ -57,6 +57,14 @@ class RemoteLearner(BaseLearner):
 
   def _save_model(self):
     print('Saving model...')
+    timestamp_curr = time.time()
+    while timestamp_curr - self.__timestamp_prev < self.HTTP_REQUEST_DURATION:
+      time.sleep(1)
+      timestamp_curr = time.time()
+    print('  --> Requesting')
+    self.__timestamp_prev = timestamp_curr
+
+    self.__timestamp_prev = timestamp_curr
     response = requests.get(self.__base_url + '/save')
     if response.status_code != 200:
       print("ERROR: Server returned {}".format(response.status_code))

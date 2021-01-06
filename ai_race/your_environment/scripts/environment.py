@@ -54,6 +54,7 @@ class Environment:
 
     # Prepare for upcoming next step
     if succeeded or failed:
+      print('* Final round: (s,f)=({}, {})'.format(succeeded, failed))
       state = None
     else:
       state = self._cvt_to_tensor(observation)    # Regard observation as status 's' directly
