@@ -152,7 +152,7 @@ class BaseLearner(object):
     try:
       stat = self.__curr_game_stat.compare(self.__prev_game_stat, verbose)
     except:
-      stat = (False, False, False)
+      stat = [False, False, False]
 
     # Calculate translation vector
     curr_pos = self._get_current_position()

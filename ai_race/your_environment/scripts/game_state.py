@@ -51,4 +51,4 @@ class GameState:
             if verbose:
                 print('Reached goal: {} -> {}'.format(prev_game_state.lap_count, self.lap_count))
 
-        return (succeeded, failed, reset_done)
+        return [succeeded, failed, reset_done]
