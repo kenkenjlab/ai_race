@@ -27,8 +27,16 @@ class RemoteLearner(BaseLearner):
     # Return no action if too frequent
     timestamp_curr = time.time()
     if timestamp_curr - self.__timestamp_prev < self.HTTP_REQUEST_DURATION:
-      return False, 0.0, 0.0
-    self.__timestamp_prev = timestamp_curr
+      # Check if initial, final round or others
+      if stat != None:
+        if stat[0] == False and stat[1] == False:
+          return False, 0.0, 0.0
+
+      # If initial or final round, wait and request to enable learning with reward
+      print('  --> Waiting...')
+      self._wait_request()
+    else:
+      self.__timestamp_prev = timestamp_curr
 
     # Encode and set image data
     _, buf = cv2.imencode(".png", img)
@@ -57,20 +65,22 @@ class RemoteLearner(BaseLearner):
 
   def _save_model(self):
     print('Saving model...')
-    timestamp_curr = time.time()
-    while timestamp_curr - self.__timestamp_prev < self.HTTP_REQUEST_DURATION:
-      time.sleep(1)
-      timestamp_curr = time.time()
+    self._wait_request()
     print('  --> Requesting')
-    self.__timestamp_prev = timestamp_curr
 
-    self.__timestamp_prev = timestamp_curr
     response = requests.get(self.__base_url + '/save')
     if response.status_code != 200:
       print("ERROR: Server returned {}".format(response.status_code))
 
   def _load_model(self, path):
     print('Load model (Not implemented yet)')
+
+  def _wait_request(self):
+    timestamp_curr = time.time()
+    while timestamp_curr - self.__timestamp_prev < self.HTTP_REQUEST_DURATION:
+      time.sleep(1)
+      timestamp_curr = time.time()
+    self.__timestamp_prev = timestamp_curr
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description='Remote learner')
