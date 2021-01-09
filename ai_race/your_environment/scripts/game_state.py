@@ -3,6 +3,7 @@
 import json
 
 class GameState:
+    judgestate = 'init'
     curr_time = 0.0
     max_time = 240.0
     lap_count = 0
@@ -10,9 +11,13 @@ class GameState:
     courseout_count = 0
     recovery_count = 0
 
+    def __str__(self):
+        return "[{}/{}] lap={}, recv={}, out={}, is_out={}".format(self.curr_time, self.max_time, self.lap_count, self.recovery_count, self.courseout_count, self.is_courseout)
+
     def parse(self, data):
         # Extract game status
         dic = json.loads(data)
+        self.judgestate = dic["judge_info"]["judgestate"]
         self.curr_time = float(dic["judge_info"]["elapsed_time"]["ros_time"])
         self.max_time = float(dic["judge_info"]["time_max"])
         self.lap_count = int(dic["judge_info"]["lap_count"])
@@ -39,8 +44,8 @@ class GameState:
             if verbose:
                 print('Time up: {}'.format(self.curr_time))
 
-        # Judge if time is reset
-        if self.curr_time < prev_game_state.curr_time:
+        # Judge if time, lap/out is reset
+        if self.curr_time < prev_game_state.curr_time and self.lap_count == 0 and self.courseout_count == 0:
             reset_done = True
             if verbose:
                 print('Time reset: {} -> {}'.format(prev_game_state.curr_time, self.curr_time))
