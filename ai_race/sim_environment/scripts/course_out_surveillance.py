@@ -12,11 +12,11 @@ import json
 MAX_SPEED_W = 0.5
 
 #Level1 Parameters
-Ly = 1
+Ly = 1.6
 Lx = 1.1
 r  = 0.5
-Ly_out = 3.0
-Lx_out = 2.5
+Ly_out = 2.7
+Lx_out = 2.2
 
 x = 1.6
 y = 0.0
@@ -102,7 +102,7 @@ def course_out_surveillance():
     dynamic_client = dynamic_reconfigure.client.Client("dynamic_recon_server_node", timeout=30, config_callback=dynamic_recon_callback)
     rospy.Subscriber("/gazebo/model_states", ModelStates, xy_update, queue_size = 10)
 
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(5)
     while not rospy.is_shutdown():
         judge_course_l1()
         rate.sleep()

@@ -97,8 +97,8 @@ if __name__ == "__main__":
     # set param from launch param
     JUDGE_URL = rospy.get_param('~judge_url', 'http://127.0.0.1:5000')
     JUDGESERVER_GETSTATE_URL = JUDGE_URL + "/judgeserver/getState"
-    TIMER_DURATION = rospy.get_param('~GameStateCallback_timer_duration', 0.15)
-    POST_ROSTIMER_DURATION = rospy.get_param('~PostRosTimerCallback_timer_duration', 0.15)
+    TIMER_DURATION = rospy.get_param('~GameStateCallback_timer_duration', 0.1)
+    POST_ROSTIMER_DURATION = rospy.get_param('~PostRosTimerCallback_timer_duration', 0.1)
     JUDGECOMMUNICATIOND = JudgeCommunicationd(JUDGESERVER_GETSTATE_URL, TIMER_DURATION, POST_ROSTIMER_DURATION)
 
     rospy.spin()
