@@ -146,7 +146,7 @@ def judge_course_l1():
 
     text = "topleft({:.2f}, {:.2f})={}, topright({:.2f}, {:.2f})={}, staff={}".format(topleft[0, 0], topleft[1, 0], topleft_out, topright[0, 0], topright[1, 0], topright_out, course_out_flag)
     judge_pub.publish(text)
-    print(text)
+    #print(text)
 
     course_out_flag = course_out_flag or topright_out or topleft_out
     if   (course_out_flag == True)  and (curr_max_speed_coeff != MAX_SPEED_W):
