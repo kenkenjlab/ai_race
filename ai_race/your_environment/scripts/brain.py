@@ -15,7 +15,7 @@ import torchvision.models as models
 #------------------------------------------------
 
 class Brain:
-    def __init__(self, num_actions, batch_size = 32, capacity = 1000, gamma = 0.99):
+    def __init__(self, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99):
         self.batch_size = batch_size
         self.gamma = gamma
         self.num_actions = num_actions
@@ -97,7 +97,7 @@ class Brain:
         # 出力であるdataにアクセスし、max(1)で列方向の最大値の[値、index]を求めます
         # そしてその値（index=0）を出力します
         next_state_values[non_final_mask] = self._infer(
-            non_final_next_states).data.max(1)[0]
+            non_final_next_states).data.max(1)[0].detach()
 
         # 教師となるQ(s_t, a_t)値を求める
         expected_state_action_values = reward_batch + self.gamma * next_state_values
@@ -107,7 +107,7 @@ class Brain:
 
         # 損失関数を計算する。smooth_l1_lossはHuberlossです
         loss = F.smooth_l1_loss(state_action_values,
-                                expected_state_action_values)
+                                expected_state_action_values.unsqueeze(1))
 
         # ネットワークを更新します
         self.optimizer.zero_grad()  # 勾配をリセット

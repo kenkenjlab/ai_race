@@ -11,7 +11,7 @@ import os
 
 class Environment:
 
-  def __init__(self, num_actions, batch_size = 32, capacity = 1000, gamma = 0.99):
+  def __init__(self, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99):
     # Generate agent
     self.agent = Agent(num_actions, batch_size, capacity, gamma)
     self.episode_id = -1
