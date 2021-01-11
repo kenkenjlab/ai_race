@@ -27,13 +27,14 @@ y = 0
 topleft = np.matrix([1.6, 0.0, 1.0]).T
 topright = np.matrix([1.6, 0.0, 1.0]).T
 
-HALF_WIDTH = 0.08
-HALF_LENGTH = 0.21
-scale = 1125.0 / 6.0 # 927[px] -> 3.0[m]
-center = 1125.0 / 2
+HALF_WIDTH = 0.08 # [m]
+HALF_LENGTH = 0.21 # [m]
+image_size=(1125.0, 1125.0) # [px]
+field_size=(6.0, 6.0)  # [m]
+center = (image_size[0] / 2, image_size[1] / 2)
 trans_mat = np.matrix(
-    [[scale, 0.0, center],
-    [0.0, -scale, center],
+    [[image_size[0] / field_size[0], 0.0, center[0]],
+    [0.0, -image_size[1] / field_size[1], center[1]],
     [0.0, 0.0, 1.0]]
     )
 
@@ -94,14 +95,17 @@ def check_on_label(point):
     # Check
     i = int(round(pix[0, 0]))
     j = int(round(pix[1, 0]))
+    if i < 0 or j < 0 or i >= image_size[0] or j >= image_size[1]:
+        # Outside image -> Definitely course out -> NG
+        return True
     #print(i, j)
     val = label[j, i]
 
     if val > 0:
-        # OK
+        # Inside course -> OK
         return False
 
-    # NG
+    # Outside course -> NG
     return True
 
 
