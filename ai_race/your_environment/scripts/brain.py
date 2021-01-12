@@ -114,7 +114,7 @@ class Brain:
         self.optimizer.zero_grad()  # 勾配をリセット
         loss.backward()  # バックプロパゲーションを計算
         for param in self.policy_net.parameters():
-            self.param.grad.data.clamp_(-1, 1)
+            param.grad.data.clamp_(-1, 1)
         self.optimizer.step()  # 結合パラメータを更新
 
     def decide_action(self, state, episode):
