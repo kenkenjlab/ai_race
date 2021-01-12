@@ -27,3 +27,6 @@ class Agent:
 
     def load(self, path):
         self.brain.load(path)
+
+    def update_target_network(self):
+        self.brain.update_target_network()

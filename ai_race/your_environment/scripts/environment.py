@@ -11,13 +11,14 @@ import os
 
 class Environment:
 
-  def __init__(self, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99):
+  def __init__(self, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99, target_update = 10):
     # Generate agent
     self.agent = Agent(num_actions, batch_size, capacity, gamma)
     self.episode_id = -1
     self.step_count = 0
     self.prev_state = None
     self.prev_action = None
+    self.target_update = target_update
 
   def save_model(self, dir, prefix, suffix = ''):
     path = os.path.join(dir, "{}{:04}{}.pth".format(prefix, self.get_episode_count(), suffix))
@@ -38,6 +39,11 @@ class Environment:
 
     # Prepare for upcoming next step
     state = self._cvt_to_tensor(observation)    # Regard observation as status 's' directly
+
+    # Update target network
+    if self.episode_id % self.target_update == 0:
+        print('Updating target network')
+        self.agent.update_target_network()
 
     # Get action
     action = self.agent.get_action(state, self.get_episode_count())

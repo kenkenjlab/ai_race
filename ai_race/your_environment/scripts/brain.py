@@ -15,6 +15,7 @@ import torchvision.models as models
 #------------------------------------------------
 
 class Brain:
+    TARGET_UPDATE = 10
     def __init__(self, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99):
         self.batch_size = batch_size
         self.gamma = gamma
@@ -24,22 +25,23 @@ class Brain:
         self.memory = ReplayMemory(capacity)
 
         # Build network
-        self.model = models.resnet18()
-        self.model.fc = torch.nn.Linear(512, self.num_actions)
+        self.policy_net = models.resnet18()
+        self.policy_net.fc = torch.nn.Linear(512, self.num_actions)
+        self.target_net = models.resnet18()
+        self.target_net.fc = torch.nn.Linear(512, self.num_actions)
+        self.target_net.eval()
 
         # Set device type; GPU or CPU (Use GPU if available)
         self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         #self.device = torch.device('cpu')
-        self.model = self.model.to(self.device)
+        self.policy_net = self.policy_net.to(self.device)
+        self.target_net = self.target_net.to(self.device)
 
         print('using device:', self.device)
-        #print(self.model)  # ネットワークの形を出力
+        #print(self.policy_net)  # ネットワークの形を出力
 
         # 最適化手法の設定
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.0001)
-
-    def _infer(self, data):
-        return self.model(data)
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=0.0001)
 
     def replay(self):
         """Experience Replayでネットワークの重みを学習 """
@@ -79,13 +81,13 @@ class Brain:
         # ミニバッチの作成終了------------------
 
         # ネットワークを推論モードに切り替える
-        self.model.eval()
+        self.policy_net.eval()
 
         # Q(s_t, a_t)を求める
-        # self.model(state_batch)は、[torch.FloatTensor of size self.batch_sizex2]になっており、
+        # self.policy_net(state_batch)は、[torch.FloatTensor of size self.batch_sizex2]になっており、
         # 実行したアクションに対応する[torch.FloatTensor of size self.batch_sizex1]にするために
         # gatherを使用します。
-        state_action_values = self._infer(state_batch).gather(1, action_batch)
+        state_action_values = self.policy_net(state_batch).gather(1, action_batch)
 
         # max{Q(s_t+1, a)}値を求める。
         # 次の状態がない場合は0にしておく
@@ -96,14 +98,13 @@ class Brain:
         # 次の状態がある場合の値を求める
         # 出力であるdataにアクセスし、max(1)で列方向の最大値の[値、index]を求めます
         # そしてその値（index=0）を出力します
-        next_state_values[non_final_mask] = self._infer(
-            non_final_next_states).data.max(1)[0].detach()
+        next_state_values[non_final_mask] = self.target_net(non_final_next_states).data.max(1)[0].detach()
 
         # 教師となるQ(s_t, a_t)値を求める
         expected_state_action_values = reward_batch + self.gamma * next_state_values
 
         # ネットワークを訓練モードに切り替える
-        self.model.train()
+        self.policy_net.train()  # TODO: No need?
 
         # 損失関数を計算する。smooth_l1_lossはHuberlossです
         loss = F.smooth_l1_loss(state_action_values,
@@ -112,6 +113,8 @@ class Brain:
         # ネットワークを更新します
         self.optimizer.zero_grad()  # 勾配をリセット
         loss.backward()  # バックプロパゲーションを計算
+        for param in self.policy_net.parameters():
+            self.param.grad.data.clamp_(-1, 1)
         self.optimizer.step()  # 結合パラメータを更新
 
     def decide_action(self, state, episode):
@@ -119,14 +122,14 @@ class Brain:
         epsilon = 0.5 * (1 / (episode + 1))
 
         if epsilon <= np.random.uniform(0, 1):
-            self.model.eval()  # ネットワークを推論モードに切り替える
+            self.policy_net.eval()  # ネットワークを推論モードに切り替える
 
             # Set device type; GPU or CPU
             input = Variable(state)
             input = input.to(self.device)
 
             # Infer
-            output = self._infer(input)
+            output = self.policy_net(input)
             action = output.data.max(1)[1].view(1, 1)
 
         else:
@@ -139,8 +142,12 @@ class Brain:
     def save(self, path):
         # Save a model checkpoint.
         print('Saving model...: {}'.format(path))
-        torch.save(self.model.state_dict(), path)
+        torch.save(self.policy_net.state_dict(), path)
 
     def load(self, path):
         model = torch.load(path)
-        self.model.load_state_dict(model)
+        self.policy_net.load_state_dict(model)
+        self.update_target_network()
+
+    def update_target_network(self):
+        self.target_net.load_state_dict(self.policy_net.state_dict())
