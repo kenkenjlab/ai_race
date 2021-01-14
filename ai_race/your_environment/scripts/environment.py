@@ -8,11 +8,13 @@ from PIL import Image as IMG
 import torchvision.transforms as transforms
 import cv2
 import os
+import math
 
 class Environment:
 
   def __init__(self, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99, target_update = 10):
     # Generate agent
+    self.action_factor = math.floor(float(num_actions) / 2)
     self.agent = Agent(num_actions, batch_size, capacity, gamma)
     self.episode_id = -1
     self.step_count = 0
@@ -107,4 +109,4 @@ class Environment:
   def _cvt_action(self, action_tensor):
     # Here action_tensor is torch.LongTensor of size 1x1
     val = float(action_tensor[0, 0])
-    return (val - 1.0)
+    return (val - self.action_factor) / self.action_factor

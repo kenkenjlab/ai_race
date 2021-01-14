@@ -25,10 +25,10 @@ class Brain:
         self.memory = ReplayMemory(capacity)
 
         # Build network
-        self.policy_net = models.resnet18()
-        self.policy_net.fc = torch.nn.Linear(512, self.num_actions)
-        self.target_net = models.resnet18()
-        self.target_net.fc = torch.nn.Linear(512, self.num_actions)
+        self.policy_net = models.mobilenet_v2()
+        self.policy_net.classifier[1] = torch.nn.Linear(1280, self.num_actions)
+        self.target_net = models.mobilenet_v2()
+        self.target_net.classifier[1] = torch.nn.Linear(1280, self.num_actions)
         self.target_net.eval()
 
         # Set device type; GPU or CPU (Use GPU if available)

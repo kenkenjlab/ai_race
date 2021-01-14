@@ -170,6 +170,9 @@ class BaseLearner(object):
 
     # Extract image data in OpenCV format
     img = self.__bridge.imgmsg_to_cv2(data, 'bgr8')
+    w, h, c = img.shape
+    img = img[h / 2 : h, :, :]
+    img = cv2.resize(img, (w / 4, h / 8))
 
     # Get action
     ret, velocity, yaw_rate = self._get_action(img, stat)
