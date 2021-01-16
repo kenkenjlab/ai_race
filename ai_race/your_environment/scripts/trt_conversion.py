@@ -32,6 +32,10 @@ def init_inference():
         model = SampleNet()
     elif args.model == 'simplenet':
         model = SimpleNet()
+    elif args.model == 'mobilenet':
+        model = models.mobilenet_v2()
+        model.classifier[1] = torch.nn.Linear(1280, 7)
+
     else:
         raise NotImplementedError()
     model.eval()
@@ -52,7 +56,7 @@ def parse_args():
     # Set arguments.
     arg_parser = argparse.ArgumentParser(description="Autonomous with inference")
 	
-    arg_parser.add_argument("--model", type=str, default='resnet18')
+    arg_parser.add_argument("--model", type=str, default='mobilenet')
     arg_parser.add_argument("--pretrained_model", type=str)
     arg_parser.add_argument("--trt_model", type=str, default='road_following_model_trt.pth' )
 

@@ -6,7 +6,7 @@ import json
 import argparse
 import requests
 import time
-
+import sys
 class RemoteLearner(BaseLearner):
   __episode_count = 0
   __timestamp_prev = time.time()
@@ -71,6 +71,7 @@ class RemoteLearner(BaseLearner):
     response = requests.get(self.__base_url + '/save')
     if response.status_code != 200:
       print("ERROR: Server returned {}".format(response.status_code))
+      sys.exit(response.status_code)
 
   def _load_model(self, path):
     print('Load model (Not implemented yet)')
