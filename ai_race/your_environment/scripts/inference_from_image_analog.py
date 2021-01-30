@@ -100,7 +100,7 @@ def set_throttle_steer(data):
 
     # Shrink
     h, w, c = image.shape
-    img = img[h / 2 : h, :, :]
+    img = image[h / 2 : h, :, :]
     image = cv2.resize(img, (w / 4, h / 8))
 
     image = IMG.fromarray(image)
