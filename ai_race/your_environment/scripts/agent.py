@@ -5,9 +5,9 @@ from brain import Brain
 
 
 class Agent:
-    def __init__(self, num_actions, batch_size, capacity, gamma):
+    def __init__(self, width, height, num_actions, batch_size, capacity, gamma):
         """課題の状態と行動の数を設定します"""
-        self.brain = Brain(num_actions, batch_size, capacity, gamma)  # エージェントが行動を決定するための頭脳を生成
+        self.brain = Brain(width, height, num_actions, batch_size, capacity, gamma)  # エージェントが行動を決定するための頭脳を生成
 
     def update_q_function(self):
         """Q関数を更新します"""

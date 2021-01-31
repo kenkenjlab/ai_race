@@ -27,10 +27,13 @@ y = 0
 topleft = np.matrix([1.6, 0.0, 1.0]).T
 topright = np.matrix([1.6, 0.0, 1.0]).T
 
+# Vehicle information
 HALF_WIDTH = 0.08 # [m]
 HALF_LENGTH = 0.21 # [m]
-image_size=(1125.0, 1125.0) # [px]
-field_size=(6.0, 6.0)  # [m]
+
+# Field information
+image_size=(1415.0, 1418.0) # [px]
+field_size=(8.0, 8.0)  # [m]
 center = (image_size[0] / 2, image_size[1] / 2)
 trans_mat = np.matrix(
     [[image_size[0] / field_size[0], 0.0, center[0]],
@@ -38,7 +41,7 @@ trans_mat = np.matrix(
     [0.0, 0.0, 1.0]]
     )
 
-label_file_path = "/home/jetson/catkin_ws/src/ai_race/ai_race/sim_environment/scripts/label_medium_track_plane.png"
+label_file_path = "/home/jetson/catkin_ws/src/ai_race/ai_race/sim_environment/scripts/label_medium_track_plane3.png"
 label = None
 
 judge_pub =  None

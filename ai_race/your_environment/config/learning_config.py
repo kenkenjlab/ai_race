@@ -1,1 +1,1 @@
-Discretization_number = 7
+Discretization_number = 3

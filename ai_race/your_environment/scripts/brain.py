@@ -9,14 +9,14 @@ from torch import optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 from replaymemory import ReplayMemory, Transition
-import torchvision.models as models
-#from samplenet import SampleNet
+#import torchvision.models as models
+from ateamnet import ATeamNet
 
 #------------------------------------------------
 
 class Brain:
     TARGET_UPDATE = 10
-    def __init__(self, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99):
+    def __init__(self, width, height, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99):
         self.batch_size = batch_size
         self.gamma = gamma
         self.num_actions = num_actions
@@ -25,10 +25,9 @@ class Brain:
         self.memory = ReplayMemory(capacity)
 
         # Build network
-        self.policy_net = models.mobilenet_v2()
-        self.policy_net.classifier[1] = torch.nn.Linear(1280, self.num_actions)
-        self.target_net = models.mobilenet_v2()
-        self.target_net.classifier[1] = torch.nn.Linear(1280, self.num_actions)
+        input_size = width * height
+        self.policy_net = ATeamNet(input_size, self.num_actions)
+        self.target_net = ATeamNet(input_size, self.num_actions)
         self.target_net.eval()
 
         # Set device type; GPU or CPU (Use GPU if available)

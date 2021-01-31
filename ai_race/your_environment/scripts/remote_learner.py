@@ -9,10 +9,11 @@ import time
 import sys
 class RemoteLearner(BaseLearner):
   __episode_count = 0
+  __step_count = 0
   __timestamp_prev = time.time()
   HTTP_REQUEST_DURATION = 2.0   # [s]
 
-  def __init__(self, base_url):
+  def __init__(self, base_url, online):
     BaseLearner.__init__(self)
     self.__base_url = base_url
 
@@ -58,10 +59,17 @@ class RemoteLearner(BaseLearner):
     #print(response.text)
     ret = json.loads(response.text)
     self.__episode_count = ret['episode']
+    self.__
     return True, 1.6, ret['yaw_rate']
+
+  def _finish_episode(self):
+    raise NotImplementedError()
 
   def _get_episode_count(self):
     return self.__episode_count
+
+  def _get_step_count(self):
+    return self.__step_count
 
   def _save_model(self):
     print('Saving model...')

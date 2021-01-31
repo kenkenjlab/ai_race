@@ -20,8 +20,11 @@ import cv2
 from cv_bridge import CvBridge
 
 from samplenet import SampleNet, SimpleNet
+from ateamnet import ATeamNet
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+IMG_SIZE = 80 * 32
+IMG_PIX_NUM = IMG_SIZE[0] * IMG_SIZE[1]
 
 def init_inference():
     global device
@@ -35,6 +38,12 @@ def init_inference():
     elif args.model == 'mobilenet':
         model = models.mobilenet_v2()
         model.classifier[1] = torch.nn.Linear(1280, 7)
+    elif args.model == 'ateamnet2':
+        model = ATeamNet(IMG_PIX_NUM, 2)
+    elif args.model == 'ateamnet3':
+        model = ATeamNet(IMG_PIX_NUM, 3)
+    elif args.model == 'ateamnet5':
+        model = ATeamNet(IMG_PIX_NUM, 5)
 
     else:
         raise NotImplementedError()
@@ -43,7 +52,7 @@ def init_inference():
     loaded = torch.load(args.pretrained_model)
     model.load_state_dict(loaded)
     model = model.cuda()
-    x = torch.ones((1, 3, 240, 320)).cuda()
+    x = torch.ones((1, 3, IMG_SIZE[1], IMG_SIZE[0])).cuda()
     from torch2trt import torch2trt
     #model_trt = torch2trt(model, [x], max_batch_size=100, fp16_mode=True)
     print('torch2trt...')

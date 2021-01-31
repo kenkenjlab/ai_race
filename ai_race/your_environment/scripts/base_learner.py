@@ -56,10 +56,13 @@ class BaseLearner(object):
   JUDGESERVER_REQUEST_URL = "http://127.0.0.1:5000/judgeserver/request"
   JUDGESERVER_GETSTATE_URL = "http://127.0.0.1:5000/judgeserver/getState"
   WAIT_TIME = 0.4
+  ROI = (0, 112, 320, 128)  # topleft(x1,y1) --> bottomright(x2,y2)
+  IMG_SIZE = (80, 32)
 
-  def __init__(self, name = "untitled", model_output_dir = "./"):
+  def __init__(self, name = "untitled", model_output_dir = "./", online=False):
     self.name = name
     self.model_output_dir = model_output_dir
+    self.online = online   # Learn online (replay once after each action) if true, otherwise learn in the end (replay several times in the end)
 
   def run(self):
     # Register ros node
@@ -128,6 +131,7 @@ class BaseLearner(object):
       self._spin_once(data, stat)
       if self.__succeeded or self.__failed:
         self.__state = LearnerState.FINISHED
+        self._finish_episode()
 
     elif self.__state == LearnerState.FINISHED:
       ### Reset game
@@ -171,12 +175,13 @@ class BaseLearner(object):
     # Extract image data in OpenCV format
     img = self.__bridge.imgmsg_to_cv2(data, 'bgr8')
     h, w, c = img.shape
-    img = img[h / 2 : h, :, :]
-    img = cv2.resize(img, (w / 4, h / 8))
+    img = img[h / 2 : h, :, :] # Crop
+    img = cv2.resize(img, self.IMG_SIZE) # Resize
 
     # Get action
     ret, velocity, yaw_rate = self._get_action(img, stat)
     episode = self._get_episode_count()
+    step = self._get_step_count()
     if not ret:
       print('[{0}] ep={1}; skipped'.format(self.__state, episode))
       return
@@ -189,7 +194,7 @@ class BaseLearner(object):
 
     # Print information
     time_diff = self.__timestamp_end - self.__timestamp_begin
-    print('[{0}] ep={1}; proc={2:.3f}[s]; velo={3:.2f}, yawrate={4:.2f}'.format(self.__state, episode, time_diff, velocity, yaw_rate))
+    print('[{}] ep={}; step={}; proc={:.3f}[s]; velo={:.2f}, yawrate={:.2f}'.format(self.__state, episode, step, time_diff, velocity, yaw_rate))
 
   def _judge_current_status(self):
     # Compare with previous game state
@@ -285,7 +290,16 @@ class BaseLearner(object):
     raise NotImplementedError()
 
   @abstractmethod
+  def _finish_episode(self):
+    raise NotImplementedError()
+
+  @abstractmethod
   def _get_episode_count(self):
+    # ret: int
+    raise NotImplementedError()
+
+  @abstractmethod
+  def _get_step_count(self):
     # ret: int
     raise NotImplementedError()
 
