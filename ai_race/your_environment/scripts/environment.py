@@ -17,7 +17,7 @@ class Environment:
     # Generate agent
     self.one_side = one_side
     if self.one_side:
-      self.action_factor = float(num_actions)
+      self.action_factor = float(num_actions - 1)
     else:
       self.action_factor = math.floor(float(num_actions) / 2)
     self.agent = Agent(width, height, num_actions, batch_size, capacity, gamma)
