@@ -15,10 +15,13 @@
 
 以下からイメージファイルを取得する。 <br>
  <br>
-Jetpack 4.4.1 以降を推奨 <br>
+推奨バージョンはJetpack 4.4.1  <br>
 
 ```
-Jetpack 4.4.1
+# Jetpack 4.4.1 archive
+https://developer.nvidia.com/jetpack-sdk-441-archive
+
+# latest version
 https://developer.nvidia.com/embedded/jetpack
 ```
 
