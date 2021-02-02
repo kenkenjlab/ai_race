@@ -142,6 +142,7 @@ class Brain:
         torch.save(self.policy_net.state_dict(), path)
 
     def load(self, path):
+        print('Loading model...: {}'.format(path))
         model = torch.load(path)
         self.policy_net.load_state_dict(model)
         self.update_target_network()

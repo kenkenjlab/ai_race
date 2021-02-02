@@ -17,8 +17,10 @@ class Environment:
     # Generate agent
     self.one_side = one_side
     if self.one_side:
+      print('* One side mode')
       self.action_factor = float(num_actions - 1)
     else:
+      print('* Both sides mode')
       self.action_factor = math.floor(float(num_actions) / 2)
     self.agent = Agent(width, height, num_actions, batch_size, capacity, gamma)
     self.episode_id = -1
@@ -30,6 +32,8 @@ class Environment:
 
   def save_model(self, dir, prefix, suffix = ''):
     path = os.path.join(dir, "{}{:04}{}.pth".format(prefix, self.get_episode_count(), suffix))
+    if not os.path.exists(dir):
+      os.makedirs(dir)
     self.agent.save(path)
 
   def load_model(self, path):
