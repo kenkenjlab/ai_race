@@ -3,7 +3,7 @@
 from base_learner import BaseLearner
 from environment import Environment
 import argparse
-
+import os
 class LocalLearner(BaseLearner):
 
   def __init__(self, name = "untitled", model_output_dir = "./", online = False, pretrained_model = ""):
@@ -11,6 +11,12 @@ class LocalLearner(BaseLearner):
     self.__env = Environment(self.IMG_SIZE[0], self.IMG_SIZE[1], 3, one_side=True, online=online)
     if pretrained_model:
       self._load_model(pretrained_model)
+
+  def _save_report(self):
+    print("Saving learning report...")
+    if not os.path.exists(self.model_output_dir):
+      os.makedirs(self.model_output_dir)
+    self.__env.save_report(self.model_output_dir, "ave_reward")
 
   def _get_action(self, img, stat = None):
     # Pass to environment
@@ -22,6 +28,7 @@ class LocalLearner(BaseLearner):
 
   def _finish_episode(self):
     self.__env.finish_episode()
+    self._save_report()
 
   def _get_episode_count(self):
     return self.__env.get_episode_count()

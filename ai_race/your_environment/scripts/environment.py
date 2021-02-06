@@ -10,6 +10,7 @@ import cv2
 import os
 import math
 import time
+import matplotlib.pyplot as plt
 
 class Environment:
 
@@ -29,6 +30,8 @@ class Environment:
     self.prev_action = None
     self.target_update = target_update
     self.online = online
+    self.reward_sum = 0.0
+    self.ave_rewards = []
 
   def save_model(self, dir, prefix, suffix = ''):
     path = os.path.join(dir, "{}{:04}{}.pth".format(prefix, self.get_episode_count(), suffix))
@@ -45,12 +48,32 @@ class Environment:
   def get_step_count(self):
     return self.step_count
 
+  def save_report(self, dir, prefix):
+    # Save average rewards per episode as text
+    csv_path = os.path.join(dir, "%s.csv" % prefix)
+    with open(csv_path, "w") as f:
+      text = "episode,average_reward\n"
+      for i, r in enumerate(self.ave_rewards):
+        text += "%d,%f\n" % (i, r)
+      f.write(text)
+
+    # Draw and save graph of it
+    png_path = os.path.join(dir, "%s.png" % prefix)
+    x = np.array(range(self.episode_id + 1))
+    y = np.array(self.ave_rewards)
+    fig = plt.figure()
+    fig.suptitle("Average reward per episode")
+    graph = fig.add_subplot(111, xlabel="Episode", ylabel="Average reward")
+    graph.plot(x, y)
+    fig.savefig(png_path)
+
   def start_new_episode(self, observation):
     # Observation: Image BGR8
 
     # Prepare new episode
     self.episode_id += 1
     self.step_count = 0
+    self.reward_sum = 0.0
 
     # Prepare for upcoming next step
     state = self._cvt_to_tensor(observation)    # Regard observation as status 's' directly
@@ -83,6 +106,9 @@ class Environment:
     # Calculate reward
     reward = self._calc_reward(succeeded, failed)
 
+    # Record reward
+    self.reward_sum += reward[0].item()
+
     # Memorize experience
     self.agent.memorize(self.prev_state, self.prev_action, state, reward)
 
@@ -103,9 +129,15 @@ class Environment:
     return self._cvt_action(action)
 
   def finish_episode(self):
+    # Record average reward in this current episode
+    ave_reward = self.reward_sum / self.step_count
+    self.ave_rewards.append(ave_reward)
+
+    # Stop processing if online-learning mode
     if self.online:
       return
 
+    # Replay if offline-learning mode
     print('Replaying {} times...'.format(self.step_count))
     time_begin_total = time.time()
     for i in range(self.step_count):
