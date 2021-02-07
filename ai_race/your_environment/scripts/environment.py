@@ -11,6 +11,7 @@ import os
 import math
 import time
 import matplotlib.pyplot as plt
+import matplotlib.ticker
 
 class Environment:
 
@@ -65,6 +66,10 @@ class Environment:
     fig.suptitle("Average reward per episode")
     graph = fig.add_subplot(111, xlabel="Episode", ylabel="Average reward")
     graph.plot(x, y)
+    #graph.set_yscale('log')
+    graph.grid(axis='y', which='major',color='black',linestyle='-')
+    graph.grid(axis='y', which='minor',color='black',linestyle='-')
+    graph.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
     fig.savefig(png_path)
 
   def start_new_episode(self, observation):

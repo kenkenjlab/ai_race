@@ -10,6 +10,7 @@ class GameState:
     is_courseout = 0
     courseout_count = 0
     recovery_count = 0
+    lap_time_list = []
 
     def __str__(self):
         return "[{}/{}] lap={}, recv={}, out={}, is_out={}".format(self.curr_time, self.max_time, self.lap_count, self.recovery_count, self.courseout_count, self.is_courseout)
@@ -24,6 +25,7 @@ class GameState:
         self.is_courseout = int(dic["judge_info"]["is_courseout"])
         self.courseout_count = int(dic["judge_info"]["courseout_count"])
         self.recovery_count = int(dic["judge_info"]["recovery_count"])
+        self.lap_time_list = dic["judge_info"]["lap_time"]["ros_time"]
         #print(dic)
 
     def compare(self, prev_game_state, verbose = False):
