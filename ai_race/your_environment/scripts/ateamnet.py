@@ -5,11 +5,11 @@ import torch.nn.functional as F
 class ATeamNet(nn.Module):
     def __init__(self, input_size, output_size):
         super(ATeamNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, 16, 3, 1, padding=1)  # RGB 3ch
-        self.conv2 = nn.Conv2d(16, 16, 3, 1, padding=1)
-        self.conv3 = nn.Conv2d(16, 16, 3, 1, padding=1)
-        self.conv4 = nn.Conv2d(16, 16, 3, 1, padding=1)
-        self.fc1 = nn.Linear(int(input_size * 16 / 64), 64)       # Here input tensor size is 1/64 of original image, but has 16ch.
+        self.conv1 = nn.Conv2d(3, 8, 3, 1, padding=1)  # RGB 3ch
+        self.conv2 = nn.Conv2d(8, 8, 3, 1, padding=1)
+        self.conv3 = nn.Conv2d(8, 8, 3, 1, padding=1)
+        self.conv4 = nn.Conv2d(8, 8, 3, 1, padding=1)
+        self.fc1 = nn.Linear(int(input_size * 8 / 64), 64)       # Here input tensor size is 1/64 of original image, but has 8ch.
 
         # Dueling network
         self.fc2_adv = nn.Linear(64, output_size)
