@@ -3,12 +3,8 @@
 
 from sumtree import SumTree
 import random
-from collections import namedtuple
+from transition import Transition
 import numpy as np
- 
-Transition = namedtuple(
-    'Transition', ('state', 'action', 'next_state', 'reward')
-    )
 
 class PERMemory:
     epsilon = 0.0001
@@ -40,7 +36,7 @@ class PERMemory:
             data_list.append(data)
             indexes.append(idx)
 
-        return (indexes, data_list)
+        return data_list, indexes
 
     def update(self, idx, td_error):
         priority = self._getPriority(td_error)

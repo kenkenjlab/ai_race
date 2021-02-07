@@ -8,7 +8,9 @@ from torch import nn
 from torch import optim
 import torch.nn.functional as F
 from torch.autograd import Variable
-from replaymemory import ReplayMemory, Transition
+from transition import Transition
+from replaymemory import ReplayMemory
+from permemory import PERMemory
 #import torchvision.models as models
 from ateamnet import ATeamNet
 
@@ -16,13 +18,19 @@ from ateamnet import ATeamNet
 
 class Brain:
     TARGET_UPDATE = 10
-    def __init__(self, width, height, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99):
+    def __init__(self, width, height, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99, prioritized = True):
         self.batch_size = batch_size
         self.gamma = gamma
         self.num_actions = num_actions
+        self.prioritized = prioritized
 
         # 経験を記憶するメモリオブジェクトを生成
-        self.memory = ReplayMemory(capacity)
+        if self.prioritized:
+            print('* Prioritized Experience Replay Mode')
+            self.memory = PERMemory(capacity)
+        else:
+            print('* Random Experience Replay Mode')
+            self.memory = ReplayMemory(capacity)
 
         # Build network
         input_size = width * height
@@ -50,7 +58,7 @@ class Brain:
             return
 
         # メモリからミニバッチ分のデータを取り出す
-        transitions = self.memory.sample(self.batch_size)
+        transitions, indexes = self.memory.sample(self.batch_size)
 
         # ミニバッチの作成-----------------
 
@@ -101,18 +109,26 @@ class Brain:
 
         # 教師となるQ(s_t, a_t)値を求める
         expected_state_action_values = reward_batch + self.gamma * next_state_values
+        expected_state_action_values = expected_state_action_values.unsqueeze(1)
 
         # ネットワークを訓練モードに切り替える
         self.policy_net.train()  # TODO: No need?
 
         # 損失関数を計算する。smooth_l1_lossはHuberlossです
         loss = F.smooth_l1_loss(state_action_values,
-                                expected_state_action_values.unsqueeze(1))
+                                expected_state_action_values)
 
         # ネットワークを更新します
         self.optimizer.zero_grad()  # 勾配をリセット
         loss.backward()  # バックプロパゲーションを計算
         self.optimizer.step()  # 結合パラメータを更新
+
+        # Update priority
+        if self.prioritized and indexes != None:
+            for i, val in enumerate(state_action_values):
+                td_err = abs(expected_state_action_values[i].item() - val.item())
+                self.memory.update(indexes[i], td_err)
+
 
     def decide_action(self, state, episode):
         # ε-greedy法で徐々に最適行動のみを採用する

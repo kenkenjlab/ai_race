@@ -2,12 +2,7 @@
 #-*- coding: utf-8 -*-
 
 import random
-from collections import namedtuple
- 
-Transition = namedtuple(
-    'Transition', ('state', 'action', 'next_state', 'reward')
-    )
-
+from transition import Transition
 class ReplayMemory:
 
     def __init__(self, CAPACITY):
@@ -28,7 +23,7 @@ class ReplayMemory:
 
     def sample(self, batch_size):
         """batch_size分だけ、ランダムに保存内容を取り出します"""
-        return random.sample(self.memory, batch_size)
+        return random.sample(self.memory, batch_size), None
 
     def __len__(self):
         return len(self.memory)
