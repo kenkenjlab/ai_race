@@ -4,7 +4,9 @@ import dynamic_reconfigure.client
 import time
 
 from gazebo_msgs.msg import ModelStates
-from std_msgs.msg import Bool, String
+from std_msgs.msg import String
+from nav_msgs.msg import Odometry
+from std_msgs.msg import Bool
 import requests
 import json
 import cv2
@@ -111,6 +113,11 @@ def check_on_label(point):
     # Outside course -> NG
     return True
 
+def callback_odom(msg):
+    global x
+    global y
+    x = msg.pose.pose.position.x
+    y = msg.pose.pose.position.y
 
 def judge_course_l1():
     global dynamic_client
@@ -187,6 +194,8 @@ def course_out_surveillance():
         rospy.logerr("Failed to open label file: %s" % label_file_path)
     else:
         print("Successfully loaded label file: %s" % label_file_path)
+    #rospy.Subscriber("/gazebo/model_states", ModelStates, xy_update, queue_size = 10)
+    rospy.Subscriber('/wheel_robot_tracker', Odometry, callback_odom)
 
     rate = rospy.Rate(5)
     while not rospy.is_shutdown():
