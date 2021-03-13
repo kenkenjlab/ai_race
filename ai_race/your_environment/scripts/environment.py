@@ -32,7 +32,7 @@ class Environment:
     self.target_update = target_update
     self.online = online
     self.reward_sum = 0.0
-    self.ave_rewards = []
+    self.total_rewards = []
 
   def save_model(self, dir, prefix, suffix = ''):
     path = os.path.join(dir, "{}{:04}{}.pth".format(prefix, self.get_episode_count(), suffix))
@@ -53,18 +53,18 @@ class Environment:
     # Save average rewards per episode as text
     csv_path = os.path.join(dir, "%s.csv" % prefix)
     with open(csv_path, "w") as f:
-      text = "episode,average_reward\n"
-      for i, r in enumerate(self.ave_rewards):
+      text = "episode,total_reward\n"
+      for i, r in enumerate(self.total_rewards):
         text += "%d,%f\n" % (i, r)
       f.write(text)
 
     # Draw and save graph of it
     png_path = os.path.join(dir, "%s.png" % prefix)
     x = np.array(range(self.episode_id + 1))
-    y = np.array(self.ave_rewards)
+    y = np.array(self.total_rewards)
     fig = plt.figure()
-    fig.suptitle("Average reward per episode")
-    graph = fig.add_subplot(111, xlabel="Episode", ylabel="Average reward")
+    fig.suptitle("Total reward per episode")
+    graph = fig.add_subplot(111, xlabel="Episode", ylabel="Total reward")
     graph.plot(x, y)
     #graph.set_yscale('log')
     graph.grid(axis='y', which='major',color='black',linestyle='-')
@@ -98,18 +98,23 @@ class Environment:
 
     return self._cvt_action(action)
 
-  def step_once(self, observation, succeeded, failed):
+  def step_once(self, observation, succeeded, failed, good, bad):
     # Observation: Image BGR8
 
     # Prepare for upcoming next step
-    if succeeded or failed:
+    #if succeeded or failed:
+    if failed:
       print('* Final round: (s,f)=({}, {})'.format(succeeded, failed))
       state = None
     else:
+      if good:
+        print('* Better than before!')
+      if bad:
+        print('* Worse than before!')
       state = self._cvt_to_tensor(observation)    # Regard observation as status 's' directly
 
     # Calculate reward
-    reward = self._calc_reward(succeeded, failed)
+    reward = self._calc_reward(succeeded, failed, good, bad)
 
     # Record reward
     self.reward_sum += reward[0].item()
@@ -135,8 +140,7 @@ class Environment:
 
   def finish_episode(self):
     # Record average reward in this current episode
-    ave_reward = self.reward_sum / self.step_count
-    self.ave_rewards.append(ave_reward)
+    self.total_rewards.append(self.reward_sum)
 
     # Stop processing if online-learning mode
     if self.online:
@@ -149,7 +153,7 @@ class Environment:
       time_begin = time.time()
       self.agent.update_q_function()
       time_diff = time.time() - time_begin
-      print('[{}/{}] Replay finished. proc={:.3f}[s]'.format(i, self.step_count, time_diff))
+      print('[{}/{}] Replay finished. proc={:.3f}[s]'.format(i + 1, self.step_count, time_diff))
     time_diff_total = time.time() - time_begin_total
     print('Replay all done! proc={:.3f}[s]'.format(time_diff_total))
 
@@ -161,12 +165,16 @@ class Environment:
     state[0] = img
     return state
 
-  def _calc_reward(self, succeeded, failed):
+  def _calc_reward(self, succeeded, failed, good, bad):
     val = 0.0
     if succeeded:
       val = 1.0
     elif failed:
       val = -1.0
+    elif good:
+      val = 0.0
+    elif bad:
+      val = 0.0
 
     reward = torch.FloatTensor([val])
     return reward

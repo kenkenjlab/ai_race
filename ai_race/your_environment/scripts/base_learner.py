@@ -8,12 +8,13 @@ from geometry_msgs.msg import Twist
 import time
 import cv2
 from cv_bridge import CvBridge
-import tf
+from gazebo_msgs.msg import ModelStates
 import numpy as np
 from game_state import GameState
 import requests
 import json
 from enum import Enum
+import math
 
 class LearnerState(Enum):
   STARTUP = "STARTUP"
@@ -30,22 +31,24 @@ class BaseLearner(object):
   # Publishers
   __twist_pub = None
 
-  # Subscribers
-  __tf_lis = None
-
   # Profiling
   __timestamp_begin = time.time()
   __timestamp_end = time.time()
+  __timestamp_st_chg = time.time()
 
   # Game state
   __prev_game_stat = GameState()
   __curr_game_stat = GameState()
-  __prev_pos = np.array([0.0, 0.0])
   __state = LearnerState.STARTUP
   __succeeded = False
   __failed = False
   __reset_done = False
+  __ahead = False
+  __behind = False
   __waiting_from = 0.0
+  __best_records = {}  # Key: time, Value: position
+  __curr_records = {}
+  __latest_pos = None
 
   # Training state
   __episode_should_start = True
@@ -58,6 +61,10 @@ class BaseLearner(object):
   WAIT_TIME = 0.4
   ROI = (0, 112, 320, 128)  # topleft(x1,y1) --> bottomright(x2,y2)
   IMG_SIZE = (80, 32)
+  MAX_METER_BEHIND = 0.25 #[m]
+  INITIAL_SKIP_STEP_COUNT = 5
+  INITIAL_SKIP_EPI_COUNT = 5
+  MAX_TIME_WAIT_STATE_CHANGE = 60.0 #[s]
 
   def __init__(self, name = "untitled", model_output_dir = "./", online=False):
     self.name = name
@@ -68,10 +75,6 @@ class BaseLearner(object):
     # Register ros node
     rospy.init_node(self.__node_name, anonymous=True)
 
-    # Get initial value
-    self.__tf_lis = tf.TransformListener()
-    self.__prev_pos = self._get_current_position()
-
     # Initialize
     self._init_game()
     rospy.sleep(self.WAIT_TIME)
@@ -80,6 +83,7 @@ class BaseLearner(object):
     self.__twist_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
     rospy.Subscriber('/gamestate', String, self._cb_state_acquired)
     rospy.Subscriber('/front_camera/image_raw', Image, self._cb_image_acquired)
+    rospy.Subscriber("/gazebo/model_states", ModelStates, self._cb_pos_acquired, queue_size = 10)
 
     # Spin
     print( "BaseLearner main iteration started.")
@@ -113,12 +117,21 @@ class BaseLearner(object):
     self.__prev_game_stat = self.__curr_game_stat
     self.__curr_game_stat = game_stat
 
+  def _cb_pos_acquired(self, data):
+    try:
+      pos = data.name.index('wheel_robot')
+      x = data.pose[pos].position.x
+      y = data.pose[pos].position.y
+      self.__latest_pos = np.array([x, y])
+    except:
+      self.__latest_pos = None
+
   def _cb_image_acquired(self, data):
     # Judge current status; stat=(succeeded, failed, reset)
     #self._get_gamestate()
     self._judge_current_status()
-    stat = [self.__succeeded, self.__failed, self.__reset_done]
-    #print("stat: {}, {}, {}".format(stat[0], stat[1], stat[2]))
+    stat = [self.__succeeded, self.__failed, self.__reset_done, self.__ahead, self.__behind ]
+    #print("stat: {}, {}, {}".format(stat[0], stat[1], stat[2], stat[3]))
 
     if self.__state == LearnerState.STARTUP:
       self.__reset_done = False
@@ -136,6 +149,8 @@ class BaseLearner(object):
     elif self.__state == LearnerState.FINISHED:
       ### Reset game
       print('[{}]'.format(self.__state))
+      # Update best positions per timestamp
+      self.__update_records()
       # Stop ego-vehicle
       self._move_egovehicle(0.0, 0.0)
       # Initialize game
@@ -143,15 +158,19 @@ class BaseLearner(object):
       self._init_game()
       # Save model
       self._save_model()
+      self.__timestamp_st_chg == time.time()
       self.__state = LearnerState.RESETTING
 
     elif self.__state == LearnerState.RESETTING:
       ### Check if reset game state is arrived
-      print('[{}]'.format(self.__state))
-      if self.__reset_done:
+      elapsed_time = time.time() - self.__timestamp_st_chg
+      print('[{}] {}[s] elapsed.'.format(self.__state, elapsed_time))
+      if self.__reset_done or elapsed_time > self.MAX_TIME_WAIT_STATE_CHANGE:
         self.__reset_done = False
         self.__succeeded = False
         self.__failed = False
+        self.__ahead = False
+        self.__behind = False
         self.__state = LearnerState.RESET_DONE
 
     elif self.__state == LearnerState.RESET_DONE:
@@ -208,30 +227,52 @@ class BaseLearner(object):
     self.__failed = self.__failed or stat[1]
     self.__reset_done = self.__reset_done or stat[2]
 
-    # Calculate translation vector
-    curr_pos = self._get_current_position()
-    dist = np.linalg.norm(curr_pos - self.__prev_pos)
+    # Skip below if just started
+    if self._get_episode_count() < self.INITIAL_SKIP_EPI_COUNT or self._get_step_count < self.INITIAL_SKIP_STEP_COUNT:
+      return
 
-    '''
-    # Judge if ego-vehicle is moving or stopped
-    if dist < self.THRESH_DIST_MOVING:
-      # Regard as stopped
-      self.__failed = True
-      print('Ego-vehicle stopped')
-    '''
+    # Check current position is behind the best before
+    curr_time = self.__round_timestamp(self.__curr_game_stat.curr_time)
+    curr_pos = self.__latest_pos
+    self.__curr_records[curr_time] = curr_pos
 
-  def _get_current_position(self):
-    try:
-      (trans_left, _) = self.__tf_lis.lookupTransform('/base_link', '/front_left_hinge', rospy.Time(0))
-      (trans_right, _) = self.__tf_lis.lookupTransform('/base_link', '/front_right_hinge', rospy.Time(0))
-      pos = np.array([
-        (trans_left[0] + trans_right[0]) * 0.5,
-        (trans_left[1] + trans_right[1]) * 0.5
-        ])
-    except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-      print tf.LookupException
-      pos = np.array([0.0, 0.0])
-    return pos
+    if curr_time in self.__best_records:
+      best_pos = self.__best_records[curr_time]
+      behind, rad, dist = self.__is_behind(curr_pos, best_pos)
+      self.__ahead = (not behind) and (dist > self.MAX_METER_BEHIND)
+      self.__behind = behind and (dist > self.MAX_METER_BEHIND)
+      self.__failed = self.__behind 
+      if self.__ahead:
+        #print(" *** AHEAD: time={:.2f}[s], curr_pos={}, best_pos={}, diff={:.3f}[m], diff={:.3f}[deg]".format(curr_time, curr_pos, best_pos, dist, math.degrees(-rad)))
+        pass
+      if self.__behind:
+        #print(" *** BEHIND: time={:.2f}[s], curr_pos={}, best_pos={}, diff={:.3f}[m], diff={:.3f}[deg]".format(curr_time, curr_pos, best_pos, dist, math.degrees(rad)))
+        pass
+
+  def __round_timestamp(self, timestamp):
+    return math.floor(timestamp * 100) / 100
+
+  def __is_behind(self, curr_pos, best_pos):
+    c = curr_pos / np.linalg.norm(curr_pos)
+    b = best_pos / np.linalg.norm(best_pos)
+    dist = np.linalg.norm(curr_pos - best_pos)
+    sine = (c[0] * b[1] - c[1] * b[0])
+    is_behind = sine > 0
+    return is_behind, math.asin(sine), dist
+
+  def __update_records(self):
+    if self.__succeeded:
+      for curr_key, curr_pos in self.__curr_records.items():
+        if curr_key in self.__best_records:
+          best_pos = self.__best_records[curr_key]
+          is_behind = self.__is_behind(curr_pos, best_pos)
+          if is_behind:
+            # Skip updating because current result is worse
+            continue
+        self.__best_records[curr_key] = curr_pos
+
+    # Clear current buffer
+    self.__curr_records = {}
 
   def _move_egovehicle(self, velocity, yaw_rate):
     # Generate Twist message

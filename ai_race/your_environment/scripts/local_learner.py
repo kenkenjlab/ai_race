@@ -16,14 +16,14 @@ class LocalLearner(BaseLearner):
     print("Saving learning report...")
     if not os.path.exists(self.model_output_dir):
       os.makedirs(self.model_output_dir)
-    self.__env.save_report(self.model_output_dir, "ave_reward")
+    self.__env.save_report(self.model_output_dir, "total_reward")
 
   def _get_action(self, img, stat = None):
     # Pass to environment
     if stat == None:
       action = self.__env.start_new_episode(img)
     else:
-      action = self.__env.step_once(img, stat[0], stat[1])
+      action = self.__env.step_once(img, stat[0], stat[1], stat[3], stat[4])
     return True, 1.6, action
 
   def _finish_episode(self):
