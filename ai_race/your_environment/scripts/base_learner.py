@@ -142,9 +142,13 @@ class BaseLearner(object):
     elif self.__state == LearnerState.RUNNING:
       ### Infer and publish
       self._spin_once(data, stat)
-      if self.__succeeded or self.__failed:
+      #if self.__succeeded or self.__failed:
+      if self.__failed:
         self.__state = LearnerState.FINISHED
         self._finish_episode()
+      if self.__succeeded:
+        self.__succeeded = False
+        self.__state = LearnerState.RUNNING
 
     elif self.__state == LearnerState.FINISHED:
       ### Reset game
@@ -177,12 +181,21 @@ class BaseLearner(object):
       ### Restart if new two game states are arrived
       print('[{}] Start waiting {} seconds'.format(self.__state, self.WAIT_TIME))
       self.__waiting_from = rospy.Time.now().to_sec()
+      self.__reset_done = False
+      self.__succeeded = False
+      self.__failed = False
+      self.__ahead = False
+      self.__behind = False
       self.__state = LearnerState.WAITING
     elif self.__state == LearnerState.WAITING:
       time_diff = rospy.Time.now().to_sec() - self.__waiting_from
       print('[{}] Waiting {}/{} seconds'.format(self.__state, time_diff, self.WAIT_TIME))
       if time_diff >= self.WAIT_TIME:
         self.__reset_done = False
+        self.__succeeded = False
+        self.__failed = False
+        self.__ahead = False
+        self.__behind = False
         self.__state = LearnerState.STARTUP
     else:
       print('ERROR: Unknown state: {}'.format(self.__state))
@@ -241,7 +254,7 @@ class BaseLearner(object):
       behind, rad, dist = self.__is_behind(curr_pos, best_pos)
       self.__ahead = (not behind) and (dist > self.MAX_METER_BEHIND)
       self.__behind = behind and (dist > self.MAX_METER_BEHIND)
-      self.__failed = self.__behind 
+      #self.__failed = self.__behind 
       if self.__ahead:
         #print(" *** AHEAD: time={:.2f}[s], curr_pos={}, best_pos={}, diff={:.3f}[m], diff={:.3f}[deg]".format(curr_time, curr_pos, best_pos, dist, math.degrees(-rad)))
         pass

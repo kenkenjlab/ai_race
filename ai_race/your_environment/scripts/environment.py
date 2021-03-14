@@ -10,6 +10,8 @@ import cv2
 import os
 import math
 import time
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker
 
@@ -71,10 +73,12 @@ class Environment:
     graph.grid(axis='y', which='minor',color='black',linestyle='-')
     graph.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
     fig.savefig(png_path)
+    plt.clf()
+    plt.close(fig)
 
   def start_new_episode(self, observation):
     # Observation: Image BGR8
-
+    print("episode_id increment: {}+1={}".format(self.episode_id, self.episode_id+1))
     # Prepare new episode
     self.episode_id += 1
     self.step_count = 0
@@ -108,9 +112,11 @@ class Environment:
       state = None
     else:
       if good:
-        print('* Better than before!')
+        #print('* Better than before!')
+        pass
       if bad:
-        print('* Worse than before!')
+        #print('* Worse than before!')
+        pass
       state = self._cvt_to_tensor(observation)    # Regard observation as status 's' directly
 
     # Calculate reward
@@ -141,6 +147,7 @@ class Environment:
   def finish_episode(self):
     # Record average reward in this current episode
     self.total_rewards.append(self.reward_sum)
+    print("total_rewards.append: {}".format(len(self.total_rewards)))
 
     # Stop processing if online-learning mode
     if self.online:

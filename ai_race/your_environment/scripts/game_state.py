@@ -35,7 +35,7 @@ class GameState:
         #print("Comparing game states at {} and {} [sec]".format(self.curr_time, prev_game_state.curr_time))
 
         # Judge if ego-vehicle is outside course
-        if self.courseout_count > prev_game_state.courseout_count:
+        if self.courseout_count > prev_game_state.courseout_count or self.courseout_count > 0:
             failed = True
             if verbose:
                 print('Course out: {} -> {}'.format(prev_game_state.courseout_count, self.courseout_count))
