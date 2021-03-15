@@ -78,7 +78,7 @@ class Environment:
 
   def start_new_episode(self, observation):
     # Observation: Image BGR8
-    print("episode_id increment: {}+1={}".format(self.episode_id, self.episode_id+1))
+    #print("episode_id increment: {}+1={}".format(self.episode_id, self.episode_id+1))
     # Prepare new episode
     self.episode_id += 1
     self.step_count = 0
@@ -146,8 +146,9 @@ class Environment:
 
   def finish_episode(self):
     # Record average reward in this current episode
-    self.total_rewards.append(self.reward_sum)
-    print("total_rewards.append: {}".format(len(self.total_rewards)))
+    if self.episode_id == len(self.total_rewards):
+      self.total_rewards.append(self.reward_sum)
+      #print("total_rewards.append: {}".format(len(self.total_rewards)))
 
     # Stop processing if online-learning mode
     if self.online:

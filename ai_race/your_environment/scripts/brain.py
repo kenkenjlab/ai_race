@@ -18,11 +18,16 @@ from ateamnet import ATeamNet
 
 class Brain:
     TARGET_UPDATE = 10
-    def __init__(self, width, height, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99, prioritized = True):
+    def __init__(self, width, height, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99, prioritized = True, boltzmann = True):
         self.batch_size = batch_size
         self.gamma = gamma
         self.num_actions = num_actions
         self.prioritized = prioritized
+        self.boltzmann = boltzmann
+        if self.boltzmann:
+            print('* Boltzman Selection Mode')
+        else:
+            print('* Epsilon Greedy Mode')
 
         # 経験を記憶するメモリオブジェクトを生成
         if self.prioritized:
@@ -129,26 +134,33 @@ class Brain:
                 td_err = abs(expected_state_action_values[i].item() - val.item())
                 self.memory.update(indexes[i], td_err)
 
+    def _infer_action(self, state):
+        self.policy_net.eval()  # ネットワークを推論モードに切り替える
+
+        # Set device type; GPU or CPU
+        input = Variable(state)
+        input = input.to(self.device)
+
+        # Infer
+        return self.policy_net(input)
 
     def decide_action(self, state, episode):
-        # ε-greedy法で徐々に最適行動のみを採用する
-        epsilon = 0.5 * (1 / (episode + 1))
-
-        if epsilon <= np.random.uniform(0, 1):
-            self.policy_net.eval()  # ネットワークを推論モードに切り替える
-
-            # Set device type; GPU or CPU
-            input = Variable(state)
-            input = input.to(self.device)
-
-            # Infer
-            output = self.policy_net(input)
-            action = output.data.max(1)[1].view(1, 1)
-
+        if self.boltzmann:
+            # Boltzmann selection
+            output = self._infer_action(state)
+            prob = F.softmax(output, dim=1)
+            action = torch.multinomial(prob, 1)
         else:
-            # Generate random value [0.0, 1.0)
-            action = torch.LongTensor([[random.randrange(self.num_actions)]])
-            action = action.to(self.device)
+            # ε-greedy法で徐々に最適行動のみを採用する
+            epsilon = 0.5 * (1 / (episode + 1))
+
+            if epsilon <= np.random.uniform(0, 1):
+                output = self._infer_action(state)
+                action = output.data.max(1)[1].view(1, 1)
+            else:
+                # Generate random value [0.0, 1.0)
+                action = torch.LongTensor([[random.randrange(self.num_actions)]])
+                action = action.to(self.device)
 
         return action  # FloatTensor size 1x1
 
