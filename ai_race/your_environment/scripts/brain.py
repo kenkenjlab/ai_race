@@ -107,10 +107,16 @@ class Brain:
             self.batch_size).type(torch.FloatTensor))
         next_state_values = next_state_values.to(self.device)
 
+        # DDQN: use current network to evaluate action
+        a_m = Variable(torch.zeros(self.batch_size).type(torch.LongTensor)).to(self.device)
+        a_m[non_final_mask] = self.policy_net(non_final_next_states).max(1)[1].detach()
+        a_m_non_final_next_states = a_m[non_final_mask].view(-1, 1)
+
         # 次の状態がある場合の値を求める
         # 出力であるdataにアクセスし、max(1)で列方向の最大値の[値、index]を求めます
         # そしてその値（index=0）を出力します
-        next_state_values[non_final_mask] = self.target_net(non_final_next_states).data.max(1)[0].detach()
+        #next_state_values[non_final_mask] = self.target_net(non_final_next_states).data.max(1)[0].detach()
+        next_state_values[non_final_mask] = self.target_net(non_final_next_states).gather(1, a_m_non_final_next_states).detach().squeeze()
 
         # 教師となるQ(s_t, a_t)値を求める
         expected_state_action_values = reward_batch + self.gamma * next_state_values
