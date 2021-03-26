@@ -23,7 +23,7 @@ from samplenet import SampleNet, SimpleNet
 from ateamnet import ATeamNet
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-IMG_SIZE = 80 * 32
+IMG_SIZE = (80, 32)
 IMG_PIX_NUM = IMG_SIZE[0] * IMG_SIZE[1]
 
 def init_inference():
@@ -65,7 +65,7 @@ def parse_args():
     # Set arguments.
     arg_parser = argparse.ArgumentParser(description="Autonomous with inference")
 	
-    arg_parser.add_argument("--model", type=str, default='mobilenet')
+    arg_parser.add_argument("--model", type=str, default='ateamnet3')
     arg_parser.add_argument("--pretrained_model", type=str)
     arg_parser.add_argument("--trt_model", type=str, default='road_following_model_trt.pth' )
 

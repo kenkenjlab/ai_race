@@ -4,6 +4,8 @@ from base_learner import BaseLearner
 from environment import Environment
 import argparse
 import os
+import numpy as np
+
 class LocalLearner(BaseLearner):
 
   def __init__(self, name = "untitled", model_output_dir = "./", online = False, pretrained_model = ""):

@@ -206,9 +206,7 @@ class BaseLearner(object):
 
     # Extract image data in OpenCV format
     img = self.__bridge.imgmsg_to_cv2(data, 'bgr8')
-    h, w, c = img.shape
-    img = img[h / 2 : h, :, :] # Crop
-    img = cv2.resize(img, self.IMG_SIZE) # Resize
+    img = self._preprocess_image(img)
 
     # Get action
     ret, velocity, yaw_rate = self._get_action(img, stat)
@@ -227,6 +225,12 @@ class BaseLearner(object):
     # Print information
     time_diff = self.__timestamp_end - self.__timestamp_begin
     print('[{}] ep={}; step={}; proc={:.3f}[s]; velo={:.2f}, yawrate={:.2f}'.format(self.__state, episode, step, time_diff, velocity, yaw_rate))
+
+  def _preprocess_image(self, img):
+    h, w, c = img.shape
+    img = img[h / 2 : h, :, :] # Crop
+    img = cv2.resize(img, self.IMG_SIZE) # Resize
+    return img
 
   def _judge_current_status(self):
     # Compare with previous game state
