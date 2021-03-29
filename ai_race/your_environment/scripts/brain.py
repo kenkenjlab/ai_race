@@ -18,7 +18,7 @@ from ateamnet import ATeamNet
 
 class Brain:
     TARGET_UPDATE = 10
-    def __init__(self, width, height, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99, prioritized = True, boltzmann = True):
+    def __init__(self, width, height, num_actions, batch_size = 32, capacity = 10000, gamma = 0.99, prioritized = True, boltzmann = False):
         self.batch_size = batch_size
         self.gamma = gamma
         self.num_actions = num_actions
