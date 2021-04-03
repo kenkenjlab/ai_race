@@ -65,10 +65,12 @@ class BaseLearner(object):
   INITIAL_SKIP_STEP_COUNT = 5
   INITIAL_SKIP_EPI_COUNT = 5
   MAX_TIME_WAIT_STATE_CHANGE = 60.0 #[s]
+  SAVE_MEMORY_INTERVAL = 100 #[episodes]
 
-  def __init__(self, name = "untitled", model_output_dir = "./", online=False):
+  def __init__(self, name = "untitled", model_output_dir = "./", memory_output_dir = "./", online=False):
     self.name = name
     self.model_output_dir = model_output_dir
+    self.memory_output_dir = memory_output_dir
     self.online = online   # Learn online (replay once after each action) if true, otherwise learn in the end (replay several times in the end)
 
   def run(self):
@@ -162,6 +164,8 @@ class BaseLearner(object):
       self._init_game()
       # Save model
       self._save_model()
+      if self._get_episode_count() % self.SAVE_MEMORY_INTERVAL == 0:
+        self._save_memory()
       self.__timestamp_st_chg == time.time()
       self.__state = LearnerState.RESETTING
 
@@ -367,4 +371,12 @@ class BaseLearner(object):
 
   @abstractmethod
   def _load_model(self, path):
+    raise NotImplementedError()
+
+  @abstractmethod
+  def _save_memory(self):
+    raise NotImplementedError()
+
+  @abstractmethod
+  def _load_memory(self, path):
     raise NotImplementedError()

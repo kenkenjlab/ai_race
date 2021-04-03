@@ -40,10 +40,19 @@ class Environment:
     path = os.path.join(dir, "{}{:04}{}.pth".format(prefix, self.get_episode_count(), suffix))
     if not os.path.exists(dir):
       os.makedirs(dir)
-    self.agent.save(path)
+    self.agent.save_model(path)
 
   def load_model(self, path):
-    self.agent.load(path)
+    self.agent.load_model(path)
+
+  def save_memory(self, dir, prefix, suffix = ''):
+    path = os.path.join(dir, "{}{:04}{}.pkl".format(prefix, self.get_episode_count(), suffix))
+    if not os.path.exists(dir):
+      os.makedirs(dir)
+    self.agent.save_memory(path)
+
+  def load_memory(self, path):
+    self.agent.load_memory(path)
 
   def get_episode_count(self):
     return self.episode_id
