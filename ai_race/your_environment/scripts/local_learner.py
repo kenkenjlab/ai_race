@@ -10,7 +10,7 @@ class LocalLearner(BaseLearner):
 
   def __init__(self, name = "untitled", model_output_dir = "./", memory_output_dir = "./", online = False, pretrained_model = "", previous_memory = ""):
     BaseLearner.__init__(self, name, model_output_dir, memory_output_dir, online)
-    self.__env = Environment(self.IMG_SIZE[0], self.IMG_SIZE[1], 3, one_side=True, online=online)
+    self.__env = Environment(self.IMG_SIZE[0], self.IMG_SIZE[1], 3, one_side=False, online=online)
     if pretrained_model:
       self._load_model(pretrained_model)
     if previous_memory:
