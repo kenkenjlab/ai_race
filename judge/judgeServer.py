@@ -7,6 +7,7 @@ import argparse
 import json
 import threading
 import pprint
+from decimal import Decimal, Context
 ## flask
 from flask import Flask, request, jsonify, render_template
 from flask import send_from_directory
@@ -41,6 +42,27 @@ class TimeManagementClass():
         self.lap_start_time = 0.00
         self.lap_time_list = list(range(0))
 
+class ObstacleClass():
+    def __init__(self, ObstacleKind, ObstacleName):
+        self.kind = ObstacleKind
+        self.name = ObstacleName
+        self.collision_counter = 0
+
+    def clear(self):
+        self.collision_counter = 0
+
+    def update_collision_counter(self, cnt):
+        self.collision_counter = self.collision_counter + cnt
+
+    def get_kind(self):
+        return self.kind
+
+    def get_name(self):
+        return self.name
+
+    def get_collision_counter(self):
+        return self.collision_counter
+
 class GameManagerClass:
 
     ####
@@ -53,6 +75,15 @@ class GameManagerClass:
         self.time_mode = args.timemode
         self.system_time = TimeManagementClass() # system time
         self.ros_time = TimeManagementClass()    # ros time
+        self.ObstacleClasses = [                 # Obstacle in field
+            ObstacleClass("cone", "cone_A"),      ## kind, name
+            ObstacleClass("cone", "cone_B"),
+            ObstacleClass("cone", "cone_C"),
+            ObstacleClass("cone", "cone_D"),
+            ObstacleClass("cone", "cone_E"),
+            ObstacleClass("cone", "cone_F"),
+            ObstacleClass("cone", "cone_G")
+        ]
         self.initGameData()
 
     def setJudgeState(self, state):
@@ -83,6 +114,8 @@ class GameManagerClass:
         self.recovery_count = 0
         self.courseout_count = 0
         self.is_courseout = 0
+        for ObstacleClass in self.ObstacleClasses:
+            ObstacleClass.clear()
 
     def startGame(self):
         self.setJudgeState("start")
@@ -138,7 +171,7 @@ class GameManagerClass:
         self.ros_time.elapsed_time = self.ros_time.current_time - self.ros_time.start_time
 
         # update lap time
-        if self.lap_count > self.lap_count_prev:
+        if float(self.lap_count) > float(self.lap_count_prev):
             self.lap_count_prev = self.lap_count
             # calculate lap_time
             if self.lap_count == 1:
@@ -165,13 +198,25 @@ class GameManagerClass:
         app.logger.info("updateData")
 
         # check which data is requested to update
-        ## lap count
         if "lap_count" in body:
-            self.lap_count = self.lap_count + int(body["lap_count"])
+            ## lap count
+            ## delete unnecessary 0, from lap_count value
+            current_lap = float(self.lap_count) + float(body["lap_count"])
+            self.lap_count = self.decimal_normalize( float(current_lap) )
         if "courseout_count" in body:
             self.courseout_count = self.courseout_count + int(body["courseout_count"])
         if "recovery_count" in body:
             self.recovery_count = self.recovery_count + int(body["recovery_count"])
+        if "cone" in body:
+            # update cone count
+            cone_count_body = body["cone"]
+            cone_name = cone_count_body["name"]
+            cone_count = cone_count_body["count"]
+            # search class
+            for ObstacleClass in self.ObstacleClasses:
+                if ObstacleClass.get_name() == cone_name:
+                    # update data
+                    ObstacleClass.update_collision_counter(cone_count)
         if "is_courseout" in body:
             self.is_courseout = int(body["is_courseout"])
             print(self.is_courseout)
@@ -181,6 +226,13 @@ class GameManagerClass:
 
     def getGameStateJson(self):
         self.updateTime()
+
+        # get obstacle "Cone" infomation
+        collision_counter_cone = list(range(0))
+        for ObstacleClass in self.ObstacleClasses:
+            if ObstacleClass.get_kind() == "cone":
+                counter = ObstacleClass.get_collision_counter()
+                collision_counter_cone.append(counter)
 
         # state data to json
         json = {
@@ -201,6 +253,9 @@ class GameManagerClass:
                     "system_time": self.system_time.lap_time_list,
                     "ros_time": self.ros_time.lap_time_list,
                 },
+                "collision_count": {
+                    "cone": collision_counter_cone,
+                },
                 "time_mode": self.time_mode,
                 "time_max": self.time_max,
                 "lap_count": self.lap_count,
@@ -218,6 +273,8 @@ class GameManagerClass:
     def writeResult(self):
         ## For Debug, output Result file.
         script_dir = os.path.dirname(os.path.abspath(__file__))
+        #current_time_str = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        #log_file_path = script_dir + "/log/" + "game_result_" + current_time_str + ".log"
         log_file_path = script_dir + "/log/" + "game_result.log"
         with open(log_file_path, "w") as f:
             jsondata = self.getGameStateJson()
@@ -225,6 +282,14 @@ class GameManagerClass:
             app.logger.info("Write Result {}".format(jsondata))
             print("result log: " + log_file_path)
             pprint.pprint(jsondata, compact = True)
+
+    def decimal_normalize(self, f):
+        """数値fの小数点以下を正規化する。文字列を返す"""
+        def _remove_exponent(d):
+            return d.quantize(Decimal(1)) if d == d.to_integral() else d.normalize()
+        a = Decimal.normalize(Decimal(str(f)))
+        b = _remove_exponent(a)
+        return str(b)
 
 ### API definition
 @app.route('/')
