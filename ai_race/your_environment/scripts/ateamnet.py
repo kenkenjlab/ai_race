@@ -10,9 +10,10 @@ class ATeamNet(nn.Module):
         self.conv3 = nn.Conv2d(8, 8, 3, 1, padding=1)
         self.conv4 = nn.Conv2d(8, 8, 3, 1, padding=1)
         self.fc1 = nn.Linear(int(input_size * 8 / 64), 64)       # Here input tensor size is 1/64 of original image, but has 8ch.
+        self.fc2 = nn.Linear(int(input_size * 8 / 64), 64)       # Here input tensor size is 1/64 of original image, but has 8ch.
 
         # Dueling network
-        self.fc2_adv = nn.Linear(64, output_size)
+        self.fc1_adv = nn.Linear(64, output_size)
         self.fc2_val = nn.Linear(64, 1)
 
         nn.init.kaiming_normal_(self.conv1.weight)
@@ -20,7 +21,8 @@ class ATeamNet(nn.Module):
         nn.init.kaiming_normal_(self.conv3.weight)
         nn.init.kaiming_normal_(self.conv4.weight)
         nn.init.kaiming_normal_(self.fc1.weight)
-        nn.init.kaiming_normal_(self.fc2_adv.weight)
+        nn.init.kaiming_normal_(self.fc2.weight)
+        nn.init.kaiming_normal_(self.fc1_adv.weight)
         nn.init.kaiming_normal_(self.fc2_val.weight)
 
     def forward(self, x):
@@ -36,12 +38,14 @@ class ATeamNet(nn.Module):
         x = self.conv4(x)
         x = F.relu(x)
         x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = F.relu(x)
+        y = self.fc1(x)
+        y = F.relu(y)
+        z = self.fc2(x)
+        z = F.relu(z)
 
         # Dueling network
-        adv = self.fc2_adv(x)
-        val = self.fc2_val(x).expand(-1, adv.size(1))
+        adv = self.fc1_adv(y)
+        val = self.fc2_val(z).expand(-1, adv.size(1))
         x = val + adv - adv.mean(1, keepdim=True).expand(-1, adv.size(1))
 
         return x
