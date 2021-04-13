@@ -10,6 +10,7 @@ class GameState:
     is_courseout = 0
     courseout_count = 0
     recovery_count = 0
+    collision_count = 0
     lap_time_list = []
 
     def __str__(self):
@@ -25,6 +26,7 @@ class GameState:
         self.is_courseout = int(dic["judge_info"]["is_courseout"])
         self.courseout_count = int(dic["judge_info"]["courseout_count"])
         self.recovery_count = int(dic["judge_info"]["recovery_count"])
+        self.collision_count = sum(dic["judge_info"]["collision_count"]["cone"])
         self.lap_time_list = dic["judge_info"]["lap_time"]["ros_time"]
         #print(dic)
 
@@ -39,6 +41,11 @@ class GameState:
             failed = True
             if verbose:
                 print('Course out: {} -> {}'.format(prev_game_state.courseout_count, self.courseout_count))
+
+        if self.collision_count > prev_game_state.collision_count or self.collision_count > 0:
+            failed = True
+            if verbose:
+                print('Crashed: {} -> {}'.format(prev_game_state.collision_count, self.collision_count))
 
         # Judge if time is up
         if self.curr_time >= self.max_time:

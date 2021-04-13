@@ -164,7 +164,8 @@ class BaseLearner(object):
       self._init_game()
       # Save model
       self._save_model()
-      if self._get_episode_count() % self.SAVE_MEMORY_INTERVAL == 0:
+      episode = self._get_episode_count()
+      if episode % self.SAVE_MEMORY_INTERVAL == 0 and episode > 0:
         self._save_memory()
       self.__timestamp_st_chg == time.time()
       self.__state = LearnerState.RESETTING
