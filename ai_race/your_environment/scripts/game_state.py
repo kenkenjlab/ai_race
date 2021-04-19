@@ -47,6 +47,11 @@ class GameState:
             if verbose:
                 print('Crashed: {} -> {}'.format(prev_game_state.collision_count, self.collision_count))
 
+        if self.recovery_count > prev_game_state.recovery_count and self.recovery_count > 0:
+            failed = True
+            if verbose:
+                print('Recovered: {} -> {}'.format(prev_game_state.recovery_count, self.recovery_count))
+
         # Judge if time is up
         if self.curr_time >= self.max_time:
             failed = True
