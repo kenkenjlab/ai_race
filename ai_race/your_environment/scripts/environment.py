@@ -35,6 +35,7 @@ class Environment:
     self.online = online
     self.reward_sum = 0.0
     self.total_rewards = []
+    self.total_steps = []
 
   def save_model(self, dir, prefix, suffix = ''):
     path = os.path.join(dir, "{}{:04}{}.pth".format(prefix, self.get_episode_count(), suffix))
@@ -72,15 +73,25 @@ class Environment:
     # Draw and save graph of it
     png_path = os.path.join(dir, "%s.png" % prefix)
     x = np.array(range(self.episode_id + 1))
-    y = np.array(self.total_rewards)
+    y1 = np.array(self.total_rewards)
+    y2 = np.array(self.total_steps)
     fig = plt.figure()
     fig.suptitle("Total reward per episode")
-    graph = fig.add_subplot(111, xlabel="Episode", ylabel="Total reward")
-    graph.plot(x, y)
+    graph = fig.add_subplot(111)
+    graph.plot(x, y1, 'C0', label="Total reward")
     #graph.set_yscale('log')
     graph.grid(axis='y', which='major',color='black',linestyle='-')
     graph.grid(axis='y', which='minor',color='black',linestyle='-')
     graph.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+
+    graph2 = graph.twinx()
+    graph2.plot(x, y2, 'C1', label="Total steps")
+
+    graph.set_xlabel('Episodes')
+    graph.set_ylabel('Total reward')
+    graph.grid(True)
+    graph2.set_ylabel('Total steps')
+
     fig.savefig(png_path)
     plt.clf()
     plt.close(fig)
@@ -97,7 +108,7 @@ class Environment:
     state = self._cvt_to_tensor(observation)    # Regard observation as status 's' directly
 
     # Update target network
-    if self.episode_id % self.target_update == 0:
+    if self.episode_id % self.target_update == 0 and self.episode_id > 0:
         print('Updating target network')
         self.agent.update_target_network()
 
@@ -157,6 +168,7 @@ class Environment:
     # Record average reward in this current episode
     if self.episode_id == len(self.total_rewards):
       self.total_rewards.append(self.reward_sum)
+      self.total_steps.append(self.step_count)
       #print("total_rewards.append: {}".format(len(self.total_rewards)))
 
     # Stop processing if online-learning mode
