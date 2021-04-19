@@ -24,13 +24,14 @@ from PIL import Image as IMG
 
 import cv2
 from cv_bridge import CvBridge
+import math
 
 #from samplenet import SampleNet, SimpleNet
 from ateamnet import ATeamNet
 
 IMG_SIZE = (80, 32)
 NUM_ACTIONS = 3
-ONE_SIDE = True
+ONE_SIDE = False
 if ONE_SIDE:
     print('* One side mode')
     ACTION_FACTOR = float(NUM_ACTIONS - 1)
