@@ -238,6 +238,10 @@ class BaseLearner(object):
     return img
 
   def _judge_current_status(self):
+    # Skip judgement if just started
+    if self._get_step_count() <= self.INITIAL_SKIP_STEP_COUNT:
+      return
+
     # Compare with previous game state
     verbose = (self.__state == LearnerState.RUNNING)
     try:
@@ -250,7 +254,7 @@ class BaseLearner(object):
     self.__reset_done = self.__reset_done or stat[2]
 
     # Skip below if just started
-    if self._get_episode_count() < self.INITIAL_SKIP_EPI_COUNT or self._get_step_count < self.INITIAL_SKIP_STEP_COUNT:
+    if self._get_episode_count() < self.INITIAL_SKIP_EPI_COUNT:
       return
 
     # Check current position is behind the best before
